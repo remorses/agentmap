@@ -37,6 +37,14 @@ export async function generateMap(options: GenerateOptions = {}): Promise<MapNod
  * Generate a YAML string map from a directory
  */
 export async function generateMapYaml(options: GenerateOptions = {}): Promise<string> {
-  const map = await generateMap(options)
+  const dir = resolve(options.dir ?? '.')
+  const results = await scanDirectory({ ...options, dir })
+
+  if (results.length === 0) {
+    return ''
+  }
+
+  const rootName = getRootName(dir)
+  const map = buildMap(results, rootName)
   return toYaml(map)
 }
