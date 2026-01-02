@@ -4,7 +4,7 @@
 import { mkdir, writeFile } from 'fs/promises'
 import { join, dirname, relative, basename } from 'path'
 import yaml from 'js-yaml'
-import type { FileResult, ZoneFiles, ZoneOutput, ZonedOutputOptions, DefEntry } from './types.js'
+import type { FileResult, FileEntry, MapNode, ZoneFiles, ZoneOutput, ZonedOutputOptions } from './types.js'
 
 /**
  * Group files by their resolved zone
@@ -39,56 +39,130 @@ function isInsideZone(filePath: string, zone: string): boolean {
 }
 
 /**
- * Build full-detail map content for a zone's files
+ * Get the root name for a zone
  */
-function buildZoneContent(files: FileResult[], zone: string): Record<string, unknown> {
-  const content: Record<string, unknown> = {}
-  
-  for (const file of files) {
-    let key: string
-    
-    if (zone === './') {
-      // Root zone: use full relative path
-      key = file.relativePath
-    } else if (isInsideZone(file.relativePath, zone)) {
-      // File is inside zone: use relative path from zone
-      key = relative(zone.slice(0, -1), file.relativePath)
-    } else {
-      // File is outside zone but zoned here: use absolute path with leading /
-      key = '/' + file.relativePath
-    }
-    
-    const entry: Record<string, unknown> = {}
-    
-    if (file.description) {
-      entry.description = file.description
-    }
-    
-    if (file.definitions.length > 0) {
-      const defs: DefEntry = {}
-      for (const def of file.definitions) {
-        defs[def.name] = def.line
-      }
-      entry.defs = defs
-    }
-    
-    content[key] = entry
+function getZoneRootName(zone: string, projectDir: string): string {
+  if (zone === './') {
+    const name = basename(projectDir)
+    return name === '.' || name === '' ? 'root' : name
   }
-  
-  return content
+  // Use the last part of the zone path
+  const zonePath = zone.slice(0, -1) // Remove trailing /
+  return basename(zonePath)
 }
 
 /**
- * Build summary-only content for files (used in root map's _zones)
+ * Insert a file into a nested map structure
  */
-function buildZoneSummary(files: FileResult[]): Record<string, string> {
-  const summary: Record<string, string> = {}
+function insertFile(root: MapNode, relativePath: string, result: FileResult): void {
+  const parts = relativePath.split('/')
+  let current = root
+
+  // Navigate/create directory structure
+  for (let i = 0; i < parts.length - 1; i++) {
+    const dir = parts[i]
+    if (!current[dir]) {
+      current[dir] = {}
+    }
+    current = current[dir] as MapNode
+  }
+
+  // Create file entry
+  const filename = parts[parts.length - 1]
+  const entry: FileEntry = {}
+
+  if (result.description) {
+    entry.desc = result.description
+  }
+
+  if (result.definitions.length > 0) {
+    entry.defs = {}
+    for (const def of result.definitions) {
+      entry.defs[def.name] = def.line
+    }
+  }
+
+  current[filename] = entry
+}
+
+/**
+ * Build full-detail nested map content for a zone's files
+ */
+function buildZoneContent(files: FileResult[], zone: string, projectDir: string): MapNode {
+  const root: MapNode = {}
+  const rootName = getZoneRootName(zone, projectDir)
   
   for (const file of files) {
-    summary[file.relativePath] = file.description || 'No description'
+    let relativePath: string
+    
+    if (zone === './') {
+      // Root zone: use full relative path
+      relativePath = file.relativePath
+    } else if (isInsideZone(file.relativePath, zone)) {
+      // File is inside zone: use relative path from zone
+      relativePath = relative(zone.slice(0, -1), file.relativePath)
+    } else {
+      // File is outside zone but zoned here: prefix with _external/
+      relativePath = '_external/' + file.relativePath
+    }
+    
+    insertFile(root, relativePath, file)
   }
   
-  return summary
+  // Wrap in root name
+  return { [rootName]: root }
+}
+
+/**
+ * Build summary-only nested content for files (used in root map's _zones)
+ */
+function buildZoneSummary(files: FileResult[], zone: string): MapNode {
+  const root: MapNode = {}
+  const zonePath = zone.slice(0, -1) // Remove trailing /
+  const zoneName = basename(zonePath)
+  
+  for (const file of files) {
+    // Get path relative to zone
+    const relativePath = isInsideZone(file.relativePath, zone)
+      ? relative(zonePath, file.relativePath)
+      : file.relativePath
+    
+    const parts = relativePath.split('/')
+    let current = root
+    
+    // Navigate/create directory structure
+    for (let i = 0; i < parts.length - 1; i++) {
+      const dir = parts[i]
+      if (!current[dir]) {
+        current[dir] = {}
+      }
+      current = current[dir] as MapNode
+    }
+    
+    // Just description for summary
+    const filename = parts[parts.length - 1]
+    current[filename] = { desc: file.description || 'No description' }
+  }
+  
+  return { [zoneName]: root }
+}
+
+/**
+ * Deep merge two MapNode objects
+ */
+function mergeMapNodes(target: MapNode, source: MapNode): MapNode {
+  for (const key of Object.keys(source)) {
+    if (key in target && typeof target[key] === 'object' && typeof source[key] === 'object' 
+        && !('desc' in target[key]) && !('desc' in source[key])
+        && !('defs' in target[key]) && !('defs' in source[key])) {
+      // Both are directory nodes, merge recursively
+      target[key] = mergeMapNodes(target[key] as MapNode, source[key] as MapNode)
+    } else {
+      // File entry or new key, just assign
+      target[key] = source[key]
+    }
+  }
+  return target
 }
 
 /**
@@ -110,24 +184,29 @@ export function generateZoneOutputs(
   const rootZone = zones.find(z => z.zone === './')
   const otherZones = zones.filter(z => z.zone !== './')
   
-  // Build root map.yaml
-  const rootContent: Record<string, unknown> = {}
+  // Build root map.yaml with nested structure
+  let rootContent: MapNode = {}
+  const rootName = getZoneRootName('./', projectDir)
   
   // Add full detail for root-zoned files
   if (rootZone) {
-    Object.assign(rootContent, buildZoneContent(rootZone.files, './'))
+    rootContent = buildZoneContent(rootZone.files, './', projectDir)
+  } else {
+    // Create empty root wrapper
+    rootContent = { [rootName]: {} }
   }
   
-  // Add summary for other zones under _zones key
+  // Add summary for other zones (nested under root, with _zones marker)
   if (otherZones.length > 0) {
-    const zonesSection: Record<string, Record<string, string>> = {}
+    const zonesNode: MapNode = {}
     
     for (const zone of otherZones) {
-      const zonePath = zone.zone.slice(0, -1) // Remove trailing /
-      zonesSection[zonePath] = buildZoneSummary(zone.files)
+      const zoneSummary = buildZoneSummary(zone.files, zone.zone)
+      mergeMapNodes(zonesNode, zoneSummary)
     }
     
-    rootContent._zones = zonesSection
+    // Add _zones under root
+    ;(rootContent[rootName] as MapNode)._zones = zonesNode
   }
   
   // Root output
@@ -137,10 +216,10 @@ export function generateZoneOutputs(
     content: toYaml(rootContent),
   })
   
-  // Zone outputs
+  // Zone outputs (full detail)
   for (const zone of otherZones) {
     const zonePath = zone.zone.slice(0, -1) // Remove trailing /
-    const zoneContent = buildZoneContent(zone.files, zone.zone)
+    const zoneContent = buildZoneContent(zone.files, zone.zone, projectDir)
     
     outputs.push({
       outputPath: join(projectDir, zonePath, outDir, 'map.yaml'),
