@@ -33,7 +33,7 @@ function formatFileDiff(diff: FileDiffStats): string {
 }
 
 /**
- * Format a definition as a string like "line 13-25, function, exported, added +12"
+ * Format a definition as a string like "line 13-25, function, exported, updated (+5-2)"
  */
 function formatDefinition(def: Definition): string {
   // Line range - show single line or range
@@ -49,8 +49,6 @@ function formatDefinition(def: Definition): string {
   
   // Add diff info if present
   if (def.diff) {
-    parts.push(def.diff.status)
-    
     // Format as +N-M or just +N or -M
     const diffParts: string[] = []
     if (def.diff.added > 0) {
@@ -59,8 +57,12 @@ function formatDefinition(def: Definition): string {
     if (def.diff.deleted > 0) {
       diffParts.push(`-${def.diff.deleted}`)
     }
+    
+    // Combine status with counts: "updated (+5-2)" or just "added"
     if (diffParts.length > 0) {
-      parts.push(diffParts.join(''))
+      parts.push(`${def.diff.status} (${diffParts.join('')})`)
+    } else {
+      parts.push(def.diff.status)
     }
   }
   
