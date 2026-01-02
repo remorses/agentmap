@@ -4,6 +4,11 @@
 import type { Definition, DefinitionType, Language, SyntaxNode } from '../types.js'
 
 /**
+ * Minimum body lines for a function/class to be included in defs
+ */
+const MIN_BODY_LINES = 7
+
+/**
  * Node types that represent functions per language
  */
 const FUNCTION_TYPES: Record<Language, string[]> = {
@@ -132,7 +137,7 @@ function extractDefinition(
   // Functions
   if (functionTypes.includes(node.type)) {
     const name = extractName(node, language)
-    if (name) {
+    if (name && getBodyLineCount(node) > MIN_BODY_LINES) {
       return { name, line: node.startPosition.row + 1, type: 'function', exported }
     }
   }
@@ -140,7 +145,7 @@ function extractDefinition(
   // Classes
   if (classTypes.includes(node.type)) {
     const name = extractName(node, language)
-    if (name) {
+    if (name && getBodyLineCount(node) > MIN_BODY_LINES) {
       return { name, line: node.startPosition.row + 1, type: 'class', exported }
     }
   }
@@ -173,9 +178,9 @@ function extractDefinition(
   if (constTypes.includes(node.type)) {
     // For TS/JS, only include if exported
     if ((language === 'typescript' || language === 'javascript') && !exported) {
-      // Check for arrow functions assigned to const (these are always included)
+      // Check for arrow functions assigned to const (these are always included if large enough)
       const arrowFn = extractArrowFunction(node)
-      if (arrowFn) {
+      if (arrowFn && arrowFn.bodyLines > MIN_BODY_LINES) {
         return { name: arrowFn.name, line: arrowFn.line, type: 'function', exported: false }
       }
       return null
@@ -183,7 +188,7 @@ function extractDefinition(
     
     // Check for arrow functions first
     const arrowFn = extractArrowFunction(node)
-    if (arrowFn) {
+    if (arrowFn && arrowFn.bodyLines > MIN_BODY_LINES) {
       return { name: arrowFn.name, line: arrowFn.line, type: 'function', exported }
     }
     
@@ -222,7 +227,12 @@ function extractMultipleDeclarations(
           const nameNode = child.childForFieldName('name')
           const valueNode = child.childForFieldName('value')
           if (nameNode) {
-            const type: DefinitionType = valueNode?.type === 'arrow_function' ? 'function' : 'const'
+            const isArrowFn = valueNode?.type === 'arrow_function'
+            const type: DefinitionType = isArrowFn ? 'function' : 'const'
+            // Skip small arrow functions
+            if (isArrowFn && valueNode && getBodyLineCount(valueNode) <= MIN_BODY_LINES) {
+              continue
+            }
             defs.push({
               name: nameNode.text,
               line: child.startPosition.row + 1,
@@ -377,7 +387,7 @@ function extractGoName(node: SyntaxNode): string | null {
 /**
  * Extract arrow function assigned to const/let
  */
-function extractArrowFunction(node: SyntaxNode): { name: string; line: number } | null {
+function extractArrowFunction(node: SyntaxNode): { name: string; line: number; bodyLines: number } | null {
   if (node.type !== 'lexical_declaration') return null
 
   for (let i = 0; i < node.childCount; i++) {
@@ -391,6 +401,7 @@ function extractArrowFunction(node: SyntaxNode): { name: string; line: number } 
       return {
         name: nameNode.text,
         line: node.startPosition.row + 1,
+        bodyLines: getBodyLineCount(valueNode),
       }
     }
   }
@@ -407,4 +418,11 @@ function findChild(node: SyntaxNode, type: string): SyntaxNode | null {
     if (child?.type === type) return child
   }
   return null
+}
+
+/**
+ * Get the number of lines in a node's body
+ */
+function getBodyLineCount(node: SyntaxNode): number {
+  return node.endPosition.row - node.startPosition.row + 1
 }
