@@ -237,6 +237,20 @@ export function generateZoneOutputs(
 }
 
 /**
+ * Custom sort that puts _submaps and comments first
+ */
+function sortKeysWithSubmapsFirst(a: string, b: string): number {
+  // Comments first
+  if (a.startsWith('#') && !b.startsWith('#')) return -1
+  if (!a.startsWith('#') && b.startsWith('#')) return 1
+  // _submaps second
+  if (a === '_submaps' && b !== '_submaps') return -1
+  if (a !== '_submaps' && b === '_submaps') return 1
+  // Then alphabetical
+  return a.localeCompare(b)
+}
+
+/**
  * Convert object to YAML string
  */
 function toYaml(obj: Record<string, unknown>): string {
@@ -244,7 +258,7 @@ function toYaml(obj: Record<string, unknown>): string {
     indent: 2,
     lineWidth: -1,
     noRefs: true,
-    sortKeys: true,
+    sortKeys: sortKeysWithSubmapsFirst,
     quotingType: '"',
     forceQuotes: false,
   })
@@ -257,7 +271,10 @@ function toMarkdown(obj: MapNode, depth: number = 0): string {
   const lines: string[] = []
   const indent = '  '.repeat(Math.max(0, depth - 2))
   
-  for (const [key, value] of Object.entries(obj)) {
+  // Sort entries with _submaps first
+  const entries = Object.entries(obj).sort(([a], [b]) => sortKeysWithSubmapsFirst(a, b))
+  
+  for (const [key, value] of entries) {
     // Skip comment keys
     if (key.startsWith('#')) continue
     
@@ -284,7 +301,8 @@ function toMarkdown(obj: MapNode, depth: number = 0): string {
       lines.push('')
       lines.push('> See full detail & definitions per the paths below')
       lines.push('')
-      lines.push(toMarkdown(value as MapNode, depth + 1))
+      lines.push(toMarkdown(value as MapNode, depth + 1).trim())
+      lines.push('')
     } else {
       // Directory: use heading for top levels, list for nested
       if (depth === 0) {
