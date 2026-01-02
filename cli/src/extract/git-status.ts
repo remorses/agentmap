@@ -42,8 +42,10 @@ function safeExec(cmd: string, dir: string): string {
       maxBuffer: 1024 * 1024 * 10, // 10MB
       stdio: ['pipe', 'pipe', 'pipe'], // Capture stderr too
     })
-  } catch {
-    // Any git error (not a repo, no commits, etc.) - just return empty
+  } catch (err) {
+    // Log error so user knows something happened
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`Warning: git diff failed: ${message}`)
     return ''
   }
 }
@@ -201,7 +203,9 @@ export function getAllDiffData(dir: string): {
   let fileStats: Map<string, FileDiffStats>
   try {
     fileStats = getFileStats(dir)
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`Warning: failed to get file stats: ${message}`)
     fileStats = new Map()
   }
 
@@ -209,7 +213,9 @@ export function getAllDiffData(dir: string): {
   let fileDiffs: Map<string, FileDiff>
   try {
     fileDiffs = getHunkDiff(dir)
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`Warning: failed to get hunk diff: ${message}`)
     fileDiffs = new Map()
   }
 
