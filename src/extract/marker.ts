@@ -8,6 +8,17 @@ const MARKER = '@agentmap'
 const MAX_BYTES = 30_000  // ~300 lines worth
 
 /**
+ * Regex to match @agentmap marker with optional zone
+ * Captures: zone (optional, the part after :)
+ * Examples:
+ *   @agentmap        -> zone: undefined
+ *   @agentmap:.      -> zone: "."
+ *   @agentmap:..     -> zone: ".."
+ *   @agentmap:src/common -> zone: "src/common"
+ */
+const MARKER_REGEX = /[@#]\s*agentmap(?::([^\s*]+))?/
+
+/**
  * Read the first N bytes of a file
  */
 async function readHead(filepath: string, maxBytes: number): Promise<string> {
@@ -22,7 +33,7 @@ async function readHead(filepath: string, maxBytes: number): Promise<string> {
 }
 
 /**
- * Check if file has @agentmap marker and extract description.
+ * Check if file has @agentmap marker and extract description and zone.
  * Only reads first ~30KB of file for performance.
  */
 export async function extractMarker(filepath: string): Promise<MarkerResult> {
@@ -31,11 +42,20 @@ export async function extractMarker(filepath: string): Promise<MarkerResult> {
 
   // Find the marker line
   let markerLineIndex = -1
+  let zone: string | undefined
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
     // Skip empty lines at start
     if (line === '') continue
-    // Check if this line contains the marker
+    // Check if this line contains the marker using regex
+    const match = MARKER_REGEX.exec(line)
+    if (match) {
+      markerLineIndex = i
+      zone = match[1] // Captured zone (may be undefined)
+      break
+    }
+    // Check for old-style marker without regex (backwards compatibility)
     if (line.includes(MARKER)) {
       markerLineIndex = i
       break
@@ -56,6 +76,7 @@ export async function extractMarker(filepath: string): Promise<MarkerResult> {
   return {
     found: true,
     description: description || undefined,
+    zone,
   }
 }
 
@@ -133,12 +154,15 @@ function extractDescription(lines: string[], markerLineIndex: number): string {
 
 /**
  * Extract text after @agentmap marker on the same line
+ * Skips any zone specifier (e.g., :., :.., :src/common)
  */
 function extractTextAfterMarker(line: string): string {
-  const idx = line.indexOf(MARKER)
-  if (idx === -1) return ''
-  const after = line.slice(idx + MARKER.length).trim()
-  return after
+  const match = MARKER_REGEX.exec(line)
+  if (!match) return ''
+  
+  // Get position after the full match (including zone if any)
+  const afterMatch = line.slice(match.index + match[0].length).trim()
+  return afterMatch
 }
 
 /**

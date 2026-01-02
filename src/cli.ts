@@ -5,7 +5,7 @@
 import { writeFile } from 'fs/promises'
 import { resolve } from 'path'
 import { cac } from 'cac'
-import { generateMap, generateMapYaml } from './index.js'
+import { generateMap, generateMapYaml, scanDirectory, generateZonedMaps } from './index.js'
 
 const cli = cac('agentmap')
 
@@ -23,12 +23,47 @@ The description will appear in the 'desc' field of the output.
 
 cli
   .command('[dir]', 'Generate a YAML map of the codebase')
-  .option('-o, --output <file>', 'Write output to file (default: stdout)')
+  .option('-o, --output <file>', 'Write output to single file (default: stdout)')
+  .option('--out <dir>', 'Output directory for zoned maps (enables zone mode)')
+  .option('--dry-run', 'Show what would be written without writing')
+  .option('--verbose', 'Show zone resolution details')
   .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)', { type: [] })
-  .action(async (dir: string | undefined, options: { output?: string; ignore?: string[] }) => {
+  .action(async (dir: string | undefined, options: { 
+    output?: string
+    out?: string
+    dryRun?: boolean
+    verbose?: boolean
+    ignore?: string[] 
+  }) => {
     const targetDir = resolve(dir ?? '.')
 
     try {
+      // Zoned output mode (--out)
+      if (options.out) {
+        const result = await generateZonedMaps({
+          dir: targetDir,
+          ignore: options.ignore,
+          outDir: options.out,
+          dryRun: options.dryRun,
+          verbose: options.verbose,
+        })
+        
+        if (result.fileCount === 0) {
+          console.error(NO_FILES_MESSAGE)
+          process.exit(0)
+        }
+        
+        if (options.verbose || options.dryRun) {
+          console.error(`\nProcessed ${result.fileCount} files across ${result.zoneCount} zones`)
+        }
+        
+        if (!options.dryRun) {
+          console.error(`Wrote ${result.zoneCount} map file(s)`)
+        }
+        return
+      }
+      
+      // Legacy single-file mode (-o, --output or stdout)
       const map = await generateMap({
         dir: targetDir,
         ignore: options.ignore,

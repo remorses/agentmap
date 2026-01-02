@@ -41,6 +41,8 @@ export interface MapNode {
 export interface MarkerResult {
   found: boolean
   description?: string
+  /** Zone path from marker (e.g., ".", "..", "src/common") */
+  zone?: string
 }
 
 /**
@@ -70,6 +72,8 @@ export interface FileResult {
   relativePath: string
   description?: string
   definitions: Definition[]
+  /** Resolved zone path (absolute from project root, e.g., "./" or "src/common/") */
+  zone: string
 }
 
 /**
@@ -80,6 +84,40 @@ export interface GenerateOptions {
   dir?: string
   /** Glob patterns to ignore */
   ignore?: string[]
+}
+
+/**
+ * Options for zoned output
+ */
+export interface ZonedOutputOptions {
+  /** Output directory name (default: ".ruler") */
+  outDir?: string
+  /** Show what would be written without writing */
+  dryRun?: boolean
+  /** Show zone resolution details */
+  verbose?: boolean
+}
+
+/**
+ * A zone with its files
+ */
+export interface ZoneFiles {
+  /** Zone path (e.g., "./" for root, "src/common/") */
+  zone: string
+  /** Files belonging to this zone */
+  files: FileResult[]
+}
+
+/**
+ * Output plan for a zone
+ */
+export interface ZoneOutput {
+  /** Path where map.yaml will be written */
+  outputPath: string
+  /** Zone path */
+  zone: string
+  /** YAML content */
+  content: string
 }
 
 /**

@@ -5,7 +5,7 @@ import { execSync } from 'child_process'
 import fg from 'fast-glob'
 import picomatch from 'picomatch'
 import { readFile } from 'fs/promises'
-import { join, normalize } from 'path'
+import { join, normalize, dirname, relative } from 'path'
 import { extractMarker } from './extract/marker.js'
 import { extractDefinitions } from './extract/definitions.js'
 import { parseCode, detectLanguage, LANGUAGE_EXTENSIONS } from './parser/index.js'
@@ -87,7 +87,8 @@ async function getGlobFiles(dir: string): Promise<string[]> {
  */
 export async function scanDirectory(options: GenerateOptions = {}): Promise<FileResult[]> {
   const dir = options.dir ?? process.cwd()
-  const ignorePatterns = options.ignore ?? []
+  // Filter out null/undefined/empty values from ignore patterns
+  const ignorePatterns = (options.ignore ?? []).filter((p): p is string => typeof p === 'string' && p.length > 0)
 
   // Get file list - prefer git, fallback to glob
   let files: string[]
@@ -127,6 +128,38 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<File
 }
 
 /**
+ * Resolve zone path to absolute path from project root
+ * 
+ * @param zone - Zone from marker (e.g., ".", "..", "src/common")
+ * @param relativePath - File's path relative to project root
+ * @returns Resolved zone path (e.g., "./" for root, "src/common/")
+ */
+function resolveZone(zone: string | undefined, relativePath: string): string {
+  // No zone = root
+  if (!zone) {
+    return './'
+  }
+  
+  // Get file's directory
+  const fileDir = dirname(relativePath)
+  
+  // Relative zone (starts with .)
+  if (zone.startsWith('.')) {
+    // Resolve relative to file's directory
+    const resolved = normalize(join(fileDir, zone))
+    // Ensure it doesn't go above project root
+    if (resolved.startsWith('..')) {
+      return './'
+    }
+    // Normalize to ./ for root, otherwise add trailing slash
+    return resolved === '.' ? './' : resolved + '/'
+  }
+  
+  // Absolute zone (from project root)
+  return zone.endsWith('/') ? zone : zone + '/'
+}
+
+/**
  * Process a single file - check for marker and extract definitions
  */
 async function processFile(
@@ -152,9 +185,13 @@ async function processFile(
   const tree = await parseCode(code, language)
   const definitions = extractDefinitions(tree.rootNode, language)
 
+  // Resolve zone
+  const zone = resolveZone(marker.zone, relativePath)
+
   return {
     relativePath,
     description: marker.description,
     definitions,
+    zone,
   }
 }
