@@ -1,19 +1,19 @@
-# agentmap
+**agentmap**
 
 A compact, YAML-based inventory of your codebase, intended to be prepended to a coding agent's context at session start.
 
-## Purpose
+**Purpose**
 
 - Give the agent a fast, structured overview of files and responsibilities
 - Provide jump targets via top-level `defs` (functions/classes with line numbers)
 
-## Installation
+**Installation**
 
 ```bash
 npm install agentmap
 ```
 
-## CLI Usage
+**CLI Usage**
 
 ```bash
 # Map current directory
@@ -29,7 +29,7 @@ npx agentmap -o map.yaml
 npx agentmap --ignore "dist/**" --ignore "**/test/**"
 ```
 
-### Options
+**Options**
 
 ```
 -o, --output <file>     Write output to file (default: stdout)
@@ -38,7 +38,7 @@ npx agentmap --ignore "dist/**" --ignore "**/test/**"
 -v, --version           Show version
 ```
 
-## Library Usage
+**Library Usage**
 
 ```typescript
 import { generateMap, generateMapYaml } from 'agentmap'
@@ -56,7 +56,7 @@ const yaml = await generateMapYaml({
 })
 ```
 
-## File Detection
+**File Detection**
 
 Files with a header comment or docstring are automatically included. agentmap detects standard comment styles used in existing projects - no special markers needed.
 
@@ -115,7 +115,7 @@ func Helper() { ... }
 
 Descriptions are limited to the first 20 lines of the header comment.
 
-## Output Format
+**Output Format**
 
 ```yaml
 my-project:
@@ -137,7 +137,7 @@ my-project:
         ASTNode: 41
 ```
 
-### Format Rules
+**Format Rules**
 
 - Directories are YAML mappings
 - Files have optional `desc` (description) and `defs` (definitions)
@@ -145,7 +145,7 @@ my-project:
 - `defs` maps symbol names to 1-based line numbers
 - Only top-level `function` and `class` definitions are included
 
-## Supported Languages
+**Supported Languages**
 
 | Language   | Extensions                |
 |------------|---------------------------|
@@ -155,7 +155,7 @@ my-project:
 | Rust       | .rs                       |
 | Go         | .go                       |
 
-## OpenCode Plugin
+**OpenCode Plugin**
 
 agentmap includes a plugin for [OpenCode](https://opencode.ai) that automatically injects the codebase map into the system prompt at session start.
 
@@ -184,6 +184,6 @@ my-project:
 
 This gives the AI agent immediate context about your codebase structure without needing to explore files first.
 
-## License
+**License**
 
 MIT
