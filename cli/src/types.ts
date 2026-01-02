@@ -1,4 +1,3 @@
-// @agentmap
 // Core type definitions for the codebase map.
 
 import type Parser from 'web-tree-sitter'
@@ -14,17 +13,26 @@ export type Language =
   | 'go'
 
 /**
- * Symbol definitions mapping: name -> 1-based line number
+ * Symbol definitions mapping: name -> description string
  */
 export interface DefEntry {
-  [symbolName: string]: number
+  [symbolName: string]: string
+}
+
+/**
+ * Git diff stats for a file (total lines added/deleted)
+ */
+export interface FileDiffStats {
+  added: number
+  deleted: number
 }
 
 /**
  * A file entry in the map
  */
 export interface FileEntry {
-  desc?: string
+  description?: string
+  diff?: string  // formatted as "+N-M" or "+N" or "-M"
   defs?: DefEntry
 }
 
@@ -57,12 +65,29 @@ export type DefinitionType =
   | 'enum'
 
 /**
+ * Git status for a definition
+ */
+export type DefinitionStatus = 'added' | 'updated'
+
+/**
+ * Git diff stats for a definition
+ */
+export interface DefinitionDiff {
+  status: DefinitionStatus
+  added: number    // lines added
+  deleted: number  // lines deleted
+}
+
+/**
  * A definition extracted from source code
  */
 export interface Definition {
   name: string
-  line: number  // 1-based
+  line: number     // 1-based start line
+  endLine: number  // 1-based end line
   type: DefinitionType
+  exported: boolean
+  diff?: DefinitionDiff  // only present when --diff flag used
 }
 
 /**
@@ -74,6 +99,7 @@ export interface FileResult {
   definitions: Definition[]
   /** Resolved submap path (absolute from project root, e.g., "./" or "src/common/") */
   submap: string
+  diff?: FileDiffStats  // only present when --diff flag used
 }
 
 /**
@@ -84,6 +110,28 @@ export interface GenerateOptions {
   dir?: string
   /** Glob patterns to ignore */
   ignore?: string[]
+  /** Include git diff status for definitions */
+  diff?: boolean
+  /** Git ref to diff against (default: HEAD for unstaged, --cached for staged) */
+  diffBase?: string
+}
+
+/**
+ * A hunk from git diff output
+ */
+export interface DiffHunk {
+  oldStart: number
+  oldCount: number
+  newStart: number
+  newCount: number
+}
+
+/**
+ * Parsed diff for a single file
+ */
+export interface FileDiff {
+  path: string
+  hunks: DiffHunk[]
 }
 
 /**

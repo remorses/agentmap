@@ -1,4 +1,3 @@
-// @agentmap
 // Library exports for programmatic usage.
 
 import { resolve } from 'path'
@@ -8,10 +7,17 @@ import { toYaml } from './map/yaml.js'
 import { generateSubmapOutputs, writeSubmapOutputs, groupBySubmap, getSubmapSummary } from './submaps.js'
 import type { GenerateOptions, MapNode, SubmapOutputOptions } from './types.js'
 
+export { toYaml } from './map/yaml.js'
+
 export type {
   DefEntry,
   Definition,
+  DefinitionDiff,
+  DefinitionStatus,
+  DiffHunk,
+  FileDiffStats,
   FileEntry,
+  FileDiff,
   FileResult,
   GenerateOptions,
   Language,
@@ -39,7 +45,15 @@ export async function generateMap(options: GenerateOptions = {}): Promise<MapNod
  * Generate a YAML string map from a directory
  */
 export async function generateMapYaml(options: GenerateOptions = {}): Promise<string> {
-  const map = await generateMap(options)
+  const dir = resolve(options.dir ?? '.')
+  const results = await scanDirectory({ ...options, dir })
+
+  if (results.length === 0) {
+    return ''
+  }
+
+  const rootName = getRootName(dir)
+  const map = buildMap(results, rootName)
   return toYaml(map)
 }
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @agentmap
 // CLI entrypoint for generating codebase maps.
 
 import { writeFile } from 'fs/promises'
@@ -10,12 +9,12 @@ import type { OutputFormat } from './types.js'
 
 const cli = cac('agentmap')
 
-const NO_FILES_MESSAGE = `No files found with @agentmap marker.
+const NO_FILES_MESSAGE = `No files found with header comments.
 
 To include a file in the map, add a comment at the top:
 
-  // @agentmap
   // Description of this file.
+  // What it does and why.
 
   export function main() { ... }
 
@@ -38,13 +37,15 @@ cli
   .option('--dry-run', 'Show what would be written without writing')
   .option('--verbose', 'Show submap resolution details')
   .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)', { type: [] })
+  .option('-d, --diff', 'Include git diff status for definitions (added/updated, +N-M)')
   .action(async (dir: string | undefined, options: { 
     output?: string
     submaps?: boolean
     dir?: string
     dryRun?: boolean
     verbose?: boolean
-    ignore?: string[] 
+    ignore?: string[]
+    diff?: boolean
   }) => {
     const targetDir = resolve(dir ?? '.')
     const outputFile = options.output ?? 'map.yaml'
@@ -82,6 +83,7 @@ cli
       const map = await generateMap({
         dir: targetDir,
         ignore: options.ignore,
+        diff: options.diff,
       })
 
       // Check if map is empty (only has root key with empty object)
@@ -95,6 +97,7 @@ cli
       const yaml = await generateMapYaml({
         dir: targetDir,
         ignore: options.ignore,
+        diff: options.diff,
       })
 
       if (options.output) {

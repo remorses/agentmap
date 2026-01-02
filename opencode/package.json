@@ -1,0 +1,45 @@
+{
+  "name": "@agentmap/opencode",
+  "version": "0.2.0",
+  "description": "OpenCode plugin that injects agentmap codebase map into system prompt",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remorses/agentmap.git",
+    "directory": "opencode"
+  },
+  "homepage": "https://github.com/remorses/agentmap#readme",
+  "bugs": {
+    "url": "https://github.com/remorses/agentmap/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "agentmap": "workspace:*"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.0.224",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "agentmap",
+    "ai",
+    "agent"
+  ],
+  "license": "MIT"
+}

@@ -4,6 +4,11 @@
 import type { Definition, DefinitionType, Language, SyntaxNode } from '../types.js'
 
 /**
+ * Minimum body lines for a function/class to be included in defs
+ */
+const MIN_BODY_LINES = 5
+
+/**
  * Node types that represent functions per language
  */
 const FUNCTION_TYPES: Record<Language, string[]> = {
@@ -132,16 +137,28 @@ function extractDefinition(
   // Functions
   if (functionTypes.includes(node.type)) {
     const name = extractName(node, language)
-    if (name) {
-      return { name, line: node.startPosition.row + 1, type: 'function' }
+    if (name && getBodyLineCount(node) > MIN_BODY_LINES) {
+      return { 
+        name, 
+        line: node.startPosition.row + 1, 
+        endLine: node.endPosition.row + 1,
+        type: 'function', 
+        exported 
+      }
     }
   }
 
   // Classes
   if (classTypes.includes(node.type)) {
     const name = extractName(node, language)
-    if (name) {
-      return { name, line: node.startPosition.row + 1, type: 'class' }
+    if (name && getBodyLineCount(node) > MIN_BODY_LINES) {
+      return { 
+        name, 
+        line: node.startPosition.row + 1, 
+        endLine: node.endPosition.row + 1,
+        type: 'class', 
+        exported 
+      }
     }
   }
 
@@ -149,7 +166,13 @@ function extractDefinition(
   if (interfaceTypes.includes(node.type)) {
     const name = extractName(node, language)
     if (name) {
-      return { name, line: node.startPosition.row + 1, type: 'interface' }
+      return { 
+        name, 
+        line: node.startPosition.row + 1, 
+        endLine: node.endPosition.row + 1,
+        type: 'interface', 
+        exported 
+      }
     }
   }
 
@@ -157,7 +180,13 @@ function extractDefinition(
   if (typeTypes.includes(node.type)) {
     const name = extractName(node, language)
     if (name) {
-      return { name, line: node.startPosition.row + 1, type: 'type' }
+      return { 
+        name, 
+        line: node.startPosition.row + 1, 
+        endLine: node.endPosition.row + 1,
+        type: 'type', 
+        exported 
+      }
     }
   }
 
@@ -165,7 +194,13 @@ function extractDefinition(
   if (enumTypes.includes(node.type)) {
     const name = extractName(node, language)
     if (name) {
-      return { name, line: node.startPosition.row + 1, type: 'enum' }
+      return { 
+        name, 
+        line: node.startPosition.row + 1, 
+        endLine: node.endPosition.row + 1,
+        type: 'enum', 
+        exported 
+      }
     }
   }
 
@@ -173,24 +208,42 @@ function extractDefinition(
   if (constTypes.includes(node.type)) {
     // For TS/JS, only include if exported
     if ((language === 'typescript' || language === 'javascript') && !exported) {
-      // Check for arrow functions assigned to const (these are always included)
+      // Check for arrow functions assigned to const (these are always included if large enough)
       const arrowFn = extractArrowFunction(node)
-      if (arrowFn) {
-        return { name: arrowFn.name, line: arrowFn.line, type: 'function' }
+      if (arrowFn && arrowFn.bodyLines > MIN_BODY_LINES) {
+        return { 
+          name: arrowFn.name, 
+          line: arrowFn.line, 
+          endLine: arrowFn.endLine,
+          type: 'function', 
+          exported: false 
+        }
       }
       return null
     }
     
     // Check for arrow functions first
     const arrowFn = extractArrowFunction(node)
-    if (arrowFn) {
-      return { name: arrowFn.name, line: arrowFn.line, type: 'function' }
+    if (arrowFn && arrowFn.bodyLines > MIN_BODY_LINES) {
+      return { 
+        name: arrowFn.name, 
+        line: arrowFn.line, 
+        endLine: arrowFn.endLine,
+        type: 'function', 
+        exported 
+      }
     }
     
     // Otherwise it's a constant
     const name = extractConstName(node, language)
     if (name) {
-      return { name, line: node.startPosition.row + 1, type: 'const' }
+      return { 
+        name, 
+        line: node.startPosition.row + 1, 
+        endLine: node.endPosition.row + 1,
+        type: 'const', 
+        exported 
+      }
     }
   }
 
@@ -222,11 +275,18 @@ function extractMultipleDeclarations(
           const nameNode = child.childForFieldName('name')
           const valueNode = child.childForFieldName('value')
           if (nameNode) {
-            const type: DefinitionType = valueNode?.type === 'arrow_function' ? 'function' : 'const'
+            const isArrowFn = valueNode?.type === 'arrow_function'
+            const type: DefinitionType = isArrowFn ? 'function' : 'const'
+            // Skip small arrow functions
+            if (isArrowFn && valueNode && getBodyLineCount(valueNode) <= MIN_BODY_LINES) {
+              continue
+            }
             defs.push({
               name: nameNode.text,
               line: child.startPosition.row + 1,
+              endLine: child.endPosition.row + 1,
               type,
+              exported,
             })
           }
         }
@@ -376,7 +436,7 @@ function extractGoName(node: SyntaxNode): string | null {
 /**
  * Extract arrow function assigned to const/let
  */
-function extractArrowFunction(node: SyntaxNode): { name: string; line: number } | null {
+function extractArrowFunction(node: SyntaxNode): { name: string; line: number; endLine: number; bodyLines: number } | null {
   if (node.type !== 'lexical_declaration') return null
 
   for (let i = 0; i < node.childCount; i++) {
@@ -390,6 +450,8 @@ function extractArrowFunction(node: SyntaxNode): { name: string; line: number } 
       return {
         name: nameNode.text,
         line: node.startPosition.row + 1,
+        endLine: node.endPosition.row + 1,
+        bodyLines: getBodyLineCount(valueNode),
       }
     }
   }
@@ -406,4 +468,11 @@ function findChild(node: SyntaxNode, type: string): SyntaxNode | null {
     if (child?.type === type) return child
   }
   return null
+}
+
+/**
+ * Get the number of lines in a node's body
+ */
+function getBodyLineCount(node: SyntaxNode): number {
+  return node.endPosition.row - node.startPosition.row + 1
 }

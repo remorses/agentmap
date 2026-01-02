@@ -1,62 +1,8 @@
 {
-  "name": "agentmap",
-  "version": "0.1.2",
-  "description": "Generate a YAML map of your codebase for AI agent context",
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/remorses/agentmap.git"
-  },
-  "homepage": "https://github.com/remorses/agentmap#readme",
-  "bugs": {
-    "url": "https://github.com/remorses/agentmap/issues"
-  },
-  "bin": {
-    "agentmap": "./dist/cli.js"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "name": "agentmap-monorepo",
+  "private": true,
+  "workspaces": ["./*"],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "cli": "tsx src/cli.ts",
-    "prepublishOnly": "npm run build"
-  },
-  "dependencies": {
-    "cac": "^6.7.14",
-    "fast-glob": "^3.3.2",
-    "js-yaml": "^4.1.0",
-    "picomatch": "^4.0.2",
-    "tree-sitter-go": "^0.23.4",
-    "tree-sitter-javascript": "^0.23.1",
-    "tree-sitter-python": "^0.23.6",
-    "tree-sitter-rust": "^0.23.2",
-    "tree-sitter-typescript": "^0.23.2",
-    "web-tree-sitter": "^0.24.4"
-  },
-  "devDependencies": {
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.10.2",
-    "@types/picomatch": "^3.0.1",
-    "typescript": "^5.7.2"
-  },
-  "keywords": [
-    "ai",
-    "agent",
-    "codebase",
-    "map",
-    "yaml",
-    "treesitter",
-    "ast"
-  ],
-  "license": "MIT"
+    "build": "bun --filter '*' build"
+  }
 }

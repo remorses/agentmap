@@ -1,19 +1,19 @@
-# agentmap
+**agentmap**
 
 A compact, YAML-based inventory of your codebase, intended to be prepended to a coding agent's context at session start.
 
-## Purpose
+**Purpose**
 
 - Give the agent a fast, structured overview of files and responsibilities
 - Provide jump targets via top-level `defs` (functions/classes with line numbers)
 
-## Installation
+**Installation**
 
 ```bash
 npm install agentmap
 ```
 
-## CLI Usage
+**CLI Usage**
 
 ```bash
 # Map current directory
@@ -29,7 +29,7 @@ npx agentmap -o map.yaml
 npx agentmap --ignore "dist/**" --ignore "**/test/**"
 ```
 
-### Options
+**Options**
 
 ```
 -o, --output <file>     Write output to file (default: stdout)
@@ -38,7 +38,7 @@ npx agentmap --ignore "dist/**" --ignore "**/test/**"
 -v, --version           Show version
 ```
 
-## Library Usage
+**Library Usage**
 
 ```typescript
 import { generateMap, generateMapYaml } from 'agentmap'
@@ -56,35 +56,66 @@ const yaml = await generateMapYaml({
 })
 ```
 
-## Marking Files
+**File Detection**
 
-Only files with the `@agentmap` marker comment are included. Add it to the top of files you want in the map:
+Files with a header comment or docstring are automatically included. agentmap detects standard comment styles used in existing projects - no special markers needed.
+
+**TypeScript / JavaScript:**
 
 ```typescript
-// @agentmap
 // CLI entrypoint.
 // Parses args, wires deps, calls into lib/.
 
 export function main() { ... }
 ```
 
+```typescript
+/**
+ * Core data structures.
+ * Used throughout the application.
+ */
+export class App { ... }
+```
+
+**Python:**
+
 ```python
-# @agentmap
-# Parsing + normalization utilities.
+"""
+Parsing and normalization utilities.
+Handles input validation and transformation.
+"""
 
 def parse_input(): ...
 ```
 
-Block comments also work:
+```python
+# Configuration loader.
+# Reads from environment and config files.
 
-```typescript
-/**
- * @agentmap
- * Core data structures.
- */
+def load_config(): ...
 ```
 
-## Output Format
+**Rust:**
+
+```rust
+//! HTTP client module.
+//! Provides async request handling.
+
+pub fn fetch() { ... }
+```
+
+**Go:**
+
+```go
+// Package utils provides helper functions.
+// Includes string manipulation and validation.
+
+func Helper() { ... }
+```
+
+Descriptions are limited to the first 20 lines of the header comment.
+
+**Output Format**
 
 ```yaml
 my-project:
@@ -106,7 +137,7 @@ my-project:
         ASTNode: 41
 ```
 
-### Format Rules
+**Format Rules**
 
 - Directories are YAML mappings
 - Files have optional `desc` (description) and `defs` (definitions)
@@ -114,7 +145,7 @@ my-project:
 - `defs` maps symbol names to 1-based line numbers
 - Only top-level `function` and `class` definitions are included
 
-## Supported Languages
+**Supported Languages**
 
 | Language   | Extensions                |
 |------------|---------------------------|
@@ -124,6 +155,35 @@ my-project:
 | Rust       | .rs                       |
 | Go         | .go                       |
 
-## License
+**OpenCode Plugin**
+
+agentmap includes a plugin for [OpenCode](https://opencode.ai) that automatically injects the codebase map into the system prompt at session start.
+
+Add the plugin to your `opencode.json`:
+
+```json
+{
+  "plugin": ["@agentmap/opencode"]
+}
+```
+
+The plugin will scan your project for files with header comments and inject the map into the system prompt wrapped in `<agentmap>` tags:
+
+```xml
+<agentmap>
+These are some of the files in the repo with their descriptions and definition locations:
+
+my-project:
+  src:
+    main.ts:
+      desc: CLI entrypoint.
+      defs:
+        main: 12
+</agentmap>
+```
+
+This gives the AI agent immediate context about your codebase structure without needing to explore files first.
+
+**License**
 
 MIT

@@ -3,3 +3,6 @@ dist/
 *.log
 *.tsbuildinfo
 .DS_Store
+test_temp
+tmp
+.DS_Store

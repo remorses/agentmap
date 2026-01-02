@@ -1,4 +1,3 @@
-// @agentmap
 // Tree-sitter parser initialization and code parsing.
 
 import Parser from 'web-tree-sitter'
