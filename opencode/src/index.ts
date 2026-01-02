@@ -11,7 +11,7 @@ export const AgentMapPlugin: Plugin = async ({ directory }) => {
       if (!yaml.trim()) return
 
       output.system.push(`<agentmap>
-These are some of the files in the repo with their descriptions and definition locations:
+Tree of the most important files in the repo, showing descriptions and definitions:
 
 ${yaml}
 </agentmap>`)
