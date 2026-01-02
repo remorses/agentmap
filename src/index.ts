@@ -5,8 +5,8 @@ import { resolve } from 'path'
 import { scanDirectory } from './scanner.js'
 import { buildMap, getRootName } from './map/builder.js'
 import { toYaml } from './map/yaml.js'
-import { generateZoneOutputs, writeZoneOutputs, groupByZone, getZoneSummary, generateSingleFileContent } from './output.js'
-import type { GenerateOptions, MapNode, ZonedOutputOptions } from './types.js'
+import { generateSubmapOutputs, writeSubmapOutputs, groupBySubmap, getSubmapSummary } from './submaps.js'
+import type { GenerateOptions, MapNode, SubmapOutputOptions } from './types.js'
 
 export type {
   DefEntry,
@@ -18,12 +18,12 @@ export type {
   MapNode,
   MarkerResult,
   OutputFormat,
-  ZonedOutputOptions,
-  ZoneFiles,
-  ZoneOutput,
+  SubmapOutputOptions,
+  SubmapFiles,
+  SubmapOutput,
 } from './types.js'
 
-export { scanDirectory, groupByZone, generateZoneOutputs, writeZoneOutputs, getZoneSummary }
+export { scanDirectory, groupBySubmap, generateSubmapOutputs, writeSubmapOutputs, getSubmapSummary }
 
 /**
  * Generate a map object from a directory
@@ -44,76 +44,46 @@ export async function generateMapYaml(options: GenerateOptions = {}): Promise<st
 }
 
 /**
- * Options for generating zoned maps
+ * Options for generating submaps
  */
-export interface GenerateZonedOptions extends GenerateOptions, ZonedOutputOptions {}
+export interface GenerateSubmapOptions extends GenerateOptions, SubmapOutputOptions {}
 
 /**
- * Result of generating zoned maps
+ * Result of generating submaps
  */
-export interface GenerateZonedResult {
+export interface GenerateSubmapResult {
   /** Number of files processed */
   fileCount: number
-  /** Number of zones written */
-  zoneCount: number
+  /** Number of submaps written */
+  submapCount: number
 }
 
 /**
- * Generate zoned map files
+ * Generate submap files
  */
-export async function generateZonedMaps(
-  options: GenerateZonedOptions = {}
-): Promise<GenerateZonedResult> {
+export async function generateSubmaps(
+  options: GenerateSubmapOptions = {}
+): Promise<GenerateSubmapResult> {
   const dir = resolve(options.dir ?? '.')
   const results = await scanDirectory({ ...options, dir })
   
   if (results.length === 0) {
-    return { fileCount: 0, zoneCount: 0 }
+    return { fileCount: 0, submapCount: 0 }
   }
   
-  const outputs = generateZoneOutputs(results, dir, options.outDir, options.format)
+  const outputs = generateSubmapOutputs(results, dir, {
+    outDir: options.outDir,
+    outputFile: options.outputFile,
+    format: options.format,
+  })
   
-  await writeZoneOutputs(outputs, {
+  await writeSubmapOutputs(outputs, {
     dryRun: options.dryRun,
     verbose: options.verbose,
   })
   
   return {
     fileCount: results.length,
-    zoneCount: outputs.length,
-  }
-}
-
-/**
- * Result of generating a single file with submaps
- */
-export interface GenerateZonedSingleResult {
-  /** Number of files processed */
-  fileCount: number
-  /** Number of zones found */
-  zoneCount: number
-  /** The generated content */
-  content: string
-}
-
-/**
- * Generate a single file with submaps structure
- */
-export async function generateZonedSingleFile(
-  options: GenerateZonedOptions = {}
-): Promise<GenerateZonedSingleResult> {
-  const dir = resolve(options.dir ?? '.')
-  const results = await scanDirectory({ ...options, dir })
-  
-  if (results.length === 0) {
-    return { fileCount: 0, zoneCount: 0, content: '' }
-  }
-  
-  const { content, zoneCount } = generateSingleFileContent(results, dir, options.format)
-  
-  return {
-    fileCount: results.length,
-    zoneCount,
-    content,
+    submapCount: outputs.length,
   }
 }

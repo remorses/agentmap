@@ -1,54 +1,54 @@
 // @agentmap
-// Zoned output logic for generating map files per zone.
+// Submap generation: grouping, formatting, and output logic.
 
 import { mkdir, writeFile } from 'fs/promises'
 import { join, dirname, relative, basename } from 'path'
 import yaml from 'js-yaml'
-import type { FileResult, FileEntry, MapNode, ZoneFiles, ZoneOutput, ZonedOutputOptions, OutputFormat } from './types.js'
+import type { FileResult, FileEntry, MapNode, SubmapFiles, SubmapOutput, SubmapOutputOptions, OutputFormat } from './types.js'
 
 /**
- * Group files by their resolved zone
+ * Group files by their resolved submap
  */
-export function groupByZone(files: FileResult[]): ZoneFiles[] {
-  const zoneMap = new Map<string, FileResult[]>()
+export function groupBySubmap(files: FileResult[]): SubmapFiles[] {
+  const submapMap = new Map<string, FileResult[]>()
   
   for (const file of files) {
-    const zone = file.zone
-    if (!zoneMap.has(zone)) {
-      zoneMap.set(zone, [])
+    const submap = file.submap
+    if (!submapMap.has(submap)) {
+      submapMap.set(submap, [])
     }
-    zoneMap.get(zone)!.push(file)
+    submapMap.get(submap)!.push(file)
   }
   
-  // Sort zones for consistent output
-  const sortedZones = Array.from(zoneMap.keys()).sort()
+  // Sort submaps for consistent output
+  const sortedSubmaps = Array.from(submapMap.keys()).sort()
   
-  return sortedZones.map(zone => ({
-    zone,
-    files: zoneMap.get(zone)!,
+  return sortedSubmaps.map(submap => ({
+    submap,
+    files: submapMap.get(submap)!,
   }))
 }
 
 /**
- * Check if a file is physically inside a zone directory
+ * Check if a file is physically inside a submap directory
  */
-function isInsideZone(filePath: string, zone: string): boolean {
-  if (zone === './') return true
-  const zonePath = zone.slice(0, -1) // Remove trailing /
-  return filePath.startsWith(zonePath + '/')
+function isInsideSubmap(filePath: string, submap: string): boolean {
+  if (submap === './') return true
+  const submapPath = submap.slice(0, -1) // Remove trailing /
+  return filePath.startsWith(submapPath + '/')
 }
 
 /**
- * Get the root name for a zone
+ * Get the root name for a submap
  */
-function getZoneRootName(zone: string, projectDir: string): string {
-  if (zone === './') {
+function getSubmapRootName(submap: string, projectDir: string): string {
+  if (submap === './') {
     const name = basename(projectDir)
     return name === '.' || name === '' ? 'root' : name
   }
-  // Use the last part of the zone path
-  const zonePath = zone.slice(0, -1) // Remove trailing /
-  return basename(zonePath)
+  // Use the last part of the submap path
+  const submapPath = submap.slice(0, -1) // Remove trailing /
+  return basename(submapPath)
 }
 
 /**
@@ -86,23 +86,23 @@ function insertFile(root: MapNode, relativePath: string, result: FileResult): vo
 }
 
 /**
- * Build full-detail nested map content for a zone's files
+ * Build full-detail nested map content for a submap's files
  */
-function buildZoneContent(files: FileResult[], zone: string, projectDir: string): MapNode {
+function buildSubmapContent(files: FileResult[], submap: string, projectDir: string): MapNode {
   const root: MapNode = {}
-  const rootName = getZoneRootName(zone, projectDir)
+  const rootName = getSubmapRootName(submap, projectDir)
   
   for (const file of files) {
     let relativePath: string
     
-    if (zone === './') {
-      // Root zone: use full relative path
+    if (submap === './') {
+      // Root submap: use full relative path
       relativePath = file.relativePath
-    } else if (isInsideZone(file.relativePath, zone)) {
-      // File is inside zone: use relative path from zone
-      relativePath = relative(zone.slice(0, -1), file.relativePath)
+    } else if (isInsideSubmap(file.relativePath, submap)) {
+      // File is inside submap: use relative path from submap
+      relativePath = relative(submap.slice(0, -1), file.relativePath)
     } else {
-      // File is outside zone but zoned here: prefix with _external/
+      // File is outside submap but assigned here: prefix with _external/
       relativePath = '_external/' + file.relativePath
     }
     
@@ -114,17 +114,17 @@ function buildZoneContent(files: FileResult[], zone: string, projectDir: string)
 }
 
 /**
- * Build summary-only nested content for files (used in root map's _zones)
+ * Build summary-only nested content for files (used in root map's _submaps)
  */
-function buildZoneSummary(files: FileResult[], zone: string): MapNode {
+function buildSubmapSummary(files: FileResult[], submap: string): MapNode {
   const root: MapNode = {}
-  const zonePath = zone.slice(0, -1) // Remove trailing /
-  const zoneName = basename(zonePath)
+  const submapPath = submap.slice(0, -1) // Remove trailing /
+  const submapName = basename(submapPath)
   
   for (const file of files) {
-    // Get path relative to zone
-    const relativePath = isInsideZone(file.relativePath, zone)
-      ? relative(zonePath, file.relativePath)
+    // Get path relative to submap
+    const relativePath = isInsideSubmap(file.relativePath, submap)
+      ? relative(submapPath, file.relativePath)
       : file.relativePath
     
     const parts = relativePath.split('/')
@@ -144,7 +144,7 @@ function buildZoneSummary(files: FileResult[], zone: string): MapNode {
     current[filename] = { desc: file.description || 'No description' }
   }
   
-  return { [zoneName]: root }
+  return { [submapName]: root }
 }
 
 /**
@@ -166,70 +166,90 @@ function mergeMapNodes(target: MapNode, source: MapNode): MapNode {
 }
 
 /**
- * Generate zone output plans
+ * Options for generating submap outputs
+ */
+interface GenerateSubmapOutputsOptions {
+  /** Subdirectory for map files (e.g., ".ruler"). If not set, files go directly in submap dirs */
+  outDir?: string
+  /** Output filename (default: "map.yaml") */
+  outputFile?: string
+  /** Output format (default: yaml) */
+  format?: OutputFormat
+}
+
+/**
+ * Generate submap output plans
  * 
  * @param files - All scanned files
  * @param projectDir - Project root directory
- * @param outDir - Output directory name (default: .ruler)
- * @param format - Output format (default: yaml)
+ * @param options - Output options
  */
-export function generateZoneOutputs(
+export function generateSubmapOutputs(
   files: FileResult[],
   projectDir: string,
-  outDir: string = '.ruler',
-  format: OutputFormat = 'yaml'
-): ZoneOutput[] {
-  const zones = groupByZone(files)
-  const outputs: ZoneOutput[] = []
+  options: GenerateSubmapOutputsOptions = {}
+): SubmapOutput[] {
+  const { outDir, outputFile = 'map.yaml', format = 'yaml' } = options
+  const submaps = groupBySubmap(files)
+  const outputs: SubmapOutput[] = []
   
-  // Find root zone files
-  const rootZone = zones.find(z => z.zone === './')
-  const otherZones = zones.filter(z => z.zone !== './')
+  // Find root submap files
+  const rootSubmap = submaps.find(s => s.submap === './')
+  const otherSubmaps = submaps.filter(s => s.submap !== './')
   
-  // Build root map.yaml with nested structure
+  // Build root map with nested structure
   let rootContent: MapNode = {}
-  const rootName = getZoneRootName('./', projectDir)
+  const rootName = getSubmapRootName('./', projectDir)
   
-  // Add full detail for root-zoned files
-  if (rootZone) {
-    rootContent = buildZoneContent(rootZone.files, './', projectDir)
+  // Add full detail for root submap files
+  if (rootSubmap) {
+    rootContent = buildSubmapContent(rootSubmap.files, './', projectDir)
   } else {
     // Create empty root wrapper
     rootContent = { [rootName]: {} }
   }
   
-  // Add summary for other zones (nested under root, with _zones marker)
-  if (otherZones.length > 0) {
-    const zonesNode: MapNode = {}
+  // Add summary for other submaps (nested under root)
+  if (otherSubmaps.length > 0) {
+    const submapsNode: MapNode = {}
     
-    for (const zone of otherZones) {
-      const zoneSummary = buildZoneSummary(zone.files, zone.zone)
-      mergeMapNodes(zonesNode, zoneSummary)
+    for (const submap of otherSubmaps) {
+      const submapSummary = buildSubmapSummary(submap.files, submap.submap)
+      mergeMapNodes(submapsNode, submapSummary)
     }
     
     // Add _submaps under root with explanatory comment
-    ;(rootContent[rootName] as MapNode)['# See full detail & definitions per the paths below'] = null
-    ;(rootContent[rootName] as MapNode)._submaps = zonesNode
+    const rootNode = rootContent[rootName] as MapNode
+    rootNode['# See full detail & definitions per the paths below'] = null
+    rootNode._submaps = submapsNode
   }
   
-  const ext = getExtension(format)
+  // Build output path: projectDir / [outDir] / outputFile
+  const rootOutputPath = outDir 
+    ? join(projectDir, outDir, outputFile)
+    : join(projectDir, outputFile)
   
   // Root output
   outputs.push({
-    outputPath: join(projectDir, outDir, `map.${ext}`),
-    zone: './',
+    outputPath: rootOutputPath,
+    submap: './',
     content: formatContent(rootContent, format),
   })
   
-  // Zone outputs (full detail)
-  for (const zone of otherZones) {
-    const zonePath = zone.zone.slice(0, -1) // Remove trailing /
-    const zoneContent = buildZoneContent(zone.files, zone.zone, projectDir)
+  // Submap outputs (full detail)
+  for (const submap of otherSubmaps) {
+    const submapPath = submap.submap.slice(0, -1) // Remove trailing /
+    const submapContent = buildSubmapContent(submap.files, submap.submap, projectDir)
+    
+    // Build output path: projectDir / submapPath / [outDir] / outputFile
+    const submapOutputPath = outDir
+      ? join(projectDir, submapPath, outDir, outputFile)
+      : join(projectDir, submapPath, outputFile)
     
     outputs.push({
-      outputPath: join(projectDir, zonePath, outDir, `map.${ext}`),
-      zone: zone.zone,
-      content: formatContent(zoneContent, format),
+      outputPath: submapOutputPath,
+      submap: submap.submap,
+      content: formatContent(submapContent, format),
     })
   }
   
@@ -334,24 +354,17 @@ function formatContent(obj: MapNode, format: OutputFormat): string {
 }
 
 /**
- * Get file extension for format
+ * Write submap outputs to disk
  */
-function getExtension(format: OutputFormat): string {
-  return format === 'md' ? 'md' : 'yaml'
-}
-
-/**
- * Write zone outputs to disk
- */
-export async function writeZoneOutputs(
-  outputs: ZoneOutput[],
-  options: ZonedOutputOptions = {}
+export async function writeSubmapOutputs(
+  outputs: SubmapOutput[],
+  options: SubmapOutputOptions = {}
 ): Promise<void> {
   const { dryRun = false, verbose = false } = options
   
   for (const output of outputs) {
     if (verbose) {
-      console.error(`Zone: ${output.zone}`)
+      console.error(`Submap: ${output.submap}`)
       console.error(`  -> ${output.outputPath}`)
     }
     
@@ -374,60 +387,15 @@ export async function writeZoneOutputs(
 }
 
 /**
- * Get a summary of what zones will be written
+ * Get a summary of what submaps will be written
  */
-export function getZoneSummary(outputs: ZoneOutput[]): string {
+export function getSubmapSummary(outputs: SubmapOutput[]): string {
   const lines: string[] = []
   
   for (const output of outputs) {
     const fileCount = (output.content.match(/^\S+.*:$/gm) || []).length
-    lines.push(`  ${output.zone} -> ${output.outputPath} (${fileCount} entries)`)
+    lines.push(`  ${output.submap} -> ${output.outputPath} (${fileCount} entries)`)
   }
   
   return lines.join('\n')
-}
-
-/**
- * Generate content for a single file with submaps structure
- */
-export function generateSingleFileContent(
-  files: FileResult[],
-  projectDir: string,
-  format: OutputFormat = 'yaml'
-): { content: string; zoneCount: number } {
-  const zones = groupByZone(files)
-  
-  // Find root zone files
-  const rootZone = zones.find(z => z.zone === './')
-  const otherZones = zones.filter(z => z.zone !== './')
-  
-  // Build content with nested structure
-  let rootContent: MapNode = {}
-  const rootName = getZoneRootName('./', projectDir)
-  
-  // Add full detail for root-zoned files
-  if (rootZone) {
-    rootContent = buildZoneContent(rootZone.files, './', projectDir)
-  } else {
-    rootContent = { [rootName]: {} }
-  }
-  
-  // Add summary for other zones under _submaps
-  if (otherZones.length > 0) {
-    const submapsNode: MapNode = {}
-    
-    for (const zone of otherZones) {
-      const zoneSummary = buildZoneSummary(zone.files, zone.zone)
-      mergeMapNodes(submapsNode, zoneSummary)
-    }
-    
-    // Add _submaps under root with comment
-    ;(rootContent[rootName] as MapNode)['# See full detail & definitions per the paths below'] = null
-    ;(rootContent[rootName] as MapNode)._submaps = submapsNode
-  }
-  
-  return {
-    content: formatContent(rootContent, format),
-    zoneCount: zones.length,
-  }
 }

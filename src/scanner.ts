@@ -128,25 +128,25 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<File
 }
 
 /**
- * Resolve zone path to absolute path from project root
+ * Resolve submap path to absolute path from project root
  * 
- * @param zone - Zone from marker (e.g., ".", "..", "src/common")
+ * @param submap - Submap from marker (e.g., ".", "..", "src/common")
  * @param relativePath - File's path relative to project root
- * @returns Resolved zone path (e.g., "./" for root, "src/common/")
+ * @returns Resolved submap path (e.g., "./" for root, "src/common/")
  */
-function resolveZone(zone: string | undefined, relativePath: string): string {
-  // No zone = root
-  if (!zone) {
+function resolveSubmap(submap: string | undefined, relativePath: string): string {
+  // No submap = root
+  if (!submap) {
     return './'
   }
   
   // Get file's directory
   const fileDir = dirname(relativePath)
   
-  // Relative zone (starts with .)
-  if (zone.startsWith('.')) {
+  // Relative submap (starts with .)
+  if (submap.startsWith('.')) {
     // Resolve relative to file's directory
-    const resolved = normalize(join(fileDir, zone))
+    const resolved = normalize(join(fileDir, submap))
     // Ensure it doesn't go above project root
     if (resolved.startsWith('..')) {
       return './'
@@ -155,8 +155,8 @@ function resolveZone(zone: string | undefined, relativePath: string): string {
     return resolved === '.' ? './' : resolved + '/'
   }
   
-  // Absolute zone (from project root)
-  return zone.endsWith('/') ? zone : zone + '/'
+  // Absolute submap (from project root)
+  return submap.endsWith('/') ? submap : submap + '/'
 }
 
 /**
@@ -185,13 +185,13 @@ async function processFile(
   const tree = await parseCode(code, language)
   const definitions = extractDefinitions(tree.rootNode, language)
 
-  // Resolve zone
-  const zone = resolveZone(marker.zone, relativePath)
+  // Resolve submap
+  const submap = resolveSubmap(marker.submap, relativePath)
 
   return {
     relativePath,
     description: marker.description,
     definitions,
-    zone,
+    submap,
   }
 }

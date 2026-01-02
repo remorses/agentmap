@@ -41,8 +41,8 @@ export interface MapNode {
 export interface MarkerResult {
   found: boolean
   description?: string
-  /** Zone path from marker (e.g., ".", "..", "src/common") */
-  zone?: string
+  /** Submap path from marker (e.g., ".", "..", "src/common") */
+  submap?: string
 }
 
 /**
@@ -72,8 +72,8 @@ export interface FileResult {
   relativePath: string
   description?: string
   definitions: Definition[]
-  /** Resolved zone path (absolute from project root, e.g., "./" or "src/common/") */
-  zone: string
+  /** Resolved submap path (absolute from project root, e.g., "./" or "src/common/") */
+  submap: string
 }
 
 /**
@@ -92,37 +92,39 @@ export interface GenerateOptions {
 export type OutputFormat = 'yaml' | 'md'
 
 /**
- * Options for zoned output
+ * Options for submap output
  */
-export interface ZonedOutputOptions {
-  /** Output directory name (default: ".ruler") */
+export interface SubmapOutputOptions {
+  /** Subdirectory for map files (e.g., ".ruler") */
   outDir?: string
+  /** Output filename (default: "map.yaml") */
+  outputFile?: string
   /** Output format: yaml or md (default: yaml) */
   format?: OutputFormat
   /** Show what would be written without writing */
   dryRun?: boolean
-  /** Show zone resolution details */
+  /** Show submap resolution details */
   verbose?: boolean
 }
 
 /**
- * A zone with its files
+ * A submap with its files
  */
-export interface ZoneFiles {
-  /** Zone path (e.g., "./" for root, "src/common/") */
-  zone: string
-  /** Files belonging to this zone */
+export interface SubmapFiles {
+  /** Submap path (e.g., "./" for root, "src/common/") */
+  submap: string
+  /** Files belonging to this submap */
   files: FileResult[]
 }
 
 /**
- * Output plan for a zone
+ * Output plan for a submap
  */
-export interface ZoneOutput {
+export interface SubmapOutput {
   /** Path where map.yaml will be written */
   outputPath: string
-  /** Zone path */
-  zone: string
+  /** Submap path */
+  submap: string
   /** YAML content */
   content: string
 }
