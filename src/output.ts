@@ -386,3 +386,48 @@ export function getZoneSummary(outputs: ZoneOutput[]): string {
   
   return lines.join('\n')
 }
+
+/**
+ * Generate content for a single file with submaps structure
+ */
+export function generateSingleFileContent(
+  files: FileResult[],
+  projectDir: string,
+  format: OutputFormat = 'yaml'
+): { content: string; zoneCount: number } {
+  const zones = groupByZone(files)
+  
+  // Find root zone files
+  const rootZone = zones.find(z => z.zone === './')
+  const otherZones = zones.filter(z => z.zone !== './')
+  
+  // Build content with nested structure
+  let rootContent: MapNode = {}
+  const rootName = getZoneRootName('./', projectDir)
+  
+  // Add full detail for root-zoned files
+  if (rootZone) {
+    rootContent = buildZoneContent(rootZone.files, './', projectDir)
+  } else {
+    rootContent = { [rootName]: {} }
+  }
+  
+  // Add summary for other zones under _submaps
+  if (otherZones.length > 0) {
+    const submapsNode: MapNode = {}
+    
+    for (const zone of otherZones) {
+      const zoneSummary = buildZoneSummary(zone.files, zone.zone)
+      mergeMapNodes(submapsNode, zoneSummary)
+    }
+    
+    // Add _submaps under root with comment
+    ;(rootContent[rootName] as MapNode)['# See full detail & definitions per the paths below'] = null
+    ;(rootContent[rootName] as MapNode)._submaps = submapsNode
+  }
+  
+  return {
+    content: formatContent(rootContent, format),
+    zoneCount: zones.length,
+  }
+}

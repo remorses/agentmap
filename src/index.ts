@@ -5,7 +5,7 @@ import { resolve } from 'path'
 import { scanDirectory } from './scanner.js'
 import { buildMap, getRootName } from './map/builder.js'
 import { toYaml } from './map/yaml.js'
-import { generateZoneOutputs, writeZoneOutputs, groupByZone, getZoneSummary } from './output.js'
+import { generateZoneOutputs, writeZoneOutputs, groupByZone, getZoneSummary, generateSingleFileContent } from './output.js'
 import type { GenerateOptions, MapNode, ZonedOutputOptions } from './types.js'
 
 export type {
@@ -81,5 +81,39 @@ export async function generateZonedMaps(
   return {
     fileCount: results.length,
     zoneCount: outputs.length,
+  }
+}
+
+/**
+ * Result of generating a single file with submaps
+ */
+export interface GenerateZonedSingleResult {
+  /** Number of files processed */
+  fileCount: number
+  /** Number of zones found */
+  zoneCount: number
+  /** The generated content */
+  content: string
+}
+
+/**
+ * Generate a single file with submaps structure
+ */
+export async function generateZonedSingleFile(
+  options: GenerateZonedOptions = {}
+): Promise<GenerateZonedSingleResult> {
+  const dir = resolve(options.dir ?? '.')
+  const results = await scanDirectory({ ...options, dir })
+  
+  if (results.length === 0) {
+    return { fileCount: 0, zoneCount: 0, content: '' }
+  }
+  
+  const { content, zoneCount } = generateSingleFileContent(results, dir, options.format)
+  
+  return {
+    fileCount: results.length,
+    zoneCount,
+    content,
   }
 }
