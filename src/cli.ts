@@ -25,12 +25,14 @@ cli
   .command('[dir]', 'Generate a YAML map of the codebase')
   .option('-o, --output <file>', 'Write output to single file (default: stdout)')
   .option('--out <dir>', 'Output directory for zoned maps (enables zone mode)')
+  .option('--format <format>', 'Output format: yaml or md (default: yaml)')
   .option('--dry-run', 'Show what would be written without writing')
   .option('--verbose', 'Show zone resolution details')
   .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)', { type: [] })
   .action(async (dir: string | undefined, options: { 
     output?: string
     out?: string
+    format?: 'yaml' | 'md'
     dryRun?: boolean
     verbose?: boolean
     ignore?: string[] 
@@ -44,6 +46,7 @@ cli
           dir: targetDir,
           ignore: options.ignore,
           outDir: options.out,
+          format: options.format || 'yaml',
           dryRun: options.dryRun,
           verbose: options.verbose,
         })

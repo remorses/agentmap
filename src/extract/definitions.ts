@@ -1,4 +1,4 @@
-// @agentmap
+// @agentmap:.
 // Extract top-level definitions using tree-sitter.
 
 import type { Definition, DefinitionType, Language, SyntaxNode } from '../types.js'

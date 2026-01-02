@@ -4,7 +4,7 @@
 import { mkdir, writeFile } from 'fs/promises'
 import { join, dirname, relative, basename } from 'path'
 import yaml from 'js-yaml'
-import type { FileResult, FileEntry, MapNode, ZoneFiles, ZoneOutput, ZonedOutputOptions } from './types.js'
+import type { FileResult, FileEntry, MapNode, ZoneFiles, ZoneOutput, ZonedOutputOptions, OutputFormat } from './types.js'
 
 /**
  * Group files by their resolved zone
@@ -171,11 +171,13 @@ function mergeMapNodes(target: MapNode, source: MapNode): MapNode {
  * @param files - All scanned files
  * @param projectDir - Project root directory
  * @param outDir - Output directory name (default: .ruler)
+ * @param format - Output format (default: yaml)
  */
 export function generateZoneOutputs(
   files: FileResult[],
   projectDir: string,
-  outDir: string = '.ruler'
+  outDir: string = '.ruler',
+  format: OutputFormat = 'yaml'
 ): ZoneOutput[] {
   const zones = groupByZone(files)
   const outputs: ZoneOutput[] = []
@@ -205,15 +207,18 @@ export function generateZoneOutputs(
       mergeMapNodes(zonesNode, zoneSummary)
     }
     
-    // Add _zones under root
-    ;(rootContent[rootName] as MapNode)._zones = zonesNode
+    // Add _submaps under root with explanatory comment
+    ;(rootContent[rootName] as MapNode)['# See full detail & definitions per the paths below'] = null
+    ;(rootContent[rootName] as MapNode)._submaps = zonesNode
   }
+  
+  const ext = getExtension(format)
   
   // Root output
   outputs.push({
-    outputPath: join(projectDir, outDir, 'map.yaml'),
+    outputPath: join(projectDir, outDir, `map.${ext}`),
     zone: './',
-    content: toYaml(rootContent),
+    content: formatContent(rootContent, format),
   })
   
   // Zone outputs (full detail)
@@ -222,9 +227,9 @@ export function generateZoneOutputs(
     const zoneContent = buildZoneContent(zone.files, zone.zone, projectDir)
     
     outputs.push({
-      outputPath: join(projectDir, zonePath, outDir, 'map.yaml'),
+      outputPath: join(projectDir, zonePath, outDir, `map.${ext}`),
       zone: zone.zone,
-      content: toYaml(zoneContent),
+      content: formatContent(zoneContent, format),
     })
   }
   
@@ -243,6 +248,78 @@ function toYaml(obj: Record<string, unknown>): string {
     quotingType: '"',
     forceQuotes: false,
   })
+}
+
+/**
+ * Convert MapNode to Markdown format
+ */
+function toMarkdown(obj: MapNode, depth: number = 0): string {
+  const lines: string[] = []
+  const indent = '  '.repeat(Math.max(0, depth - 2))
+  
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip comment keys
+    if (key.startsWith('#')) continue
+    
+    if (value === null) continue
+    
+    // Check if it's a file entry (has desc or defs)
+    const isFile = value && typeof value === 'object' && ('desc' in value || 'defs' in value)
+    
+    if (isFile) {
+      const entry = value as FileEntry
+      // File: use bold for filename
+      lines.push(`${indent}- **${key}**${entry.desc ? `: ${entry.desc}` : ''}`)
+      
+      if (entry.defs && Object.keys(entry.defs).length > 0) {
+        const defList = Object.entries(entry.defs)
+          .map(([name, line]) => `\`${name}\`:${line}`)
+          .join(', ')
+        lines.push(`${indent}  - Defs: ${defList}`)
+      }
+    } else if (key === '_submaps') {
+      // Submaps section
+      lines.push('')
+      lines.push(`${'#'.repeat(Math.min(depth + 1, 6))} Submaps`)
+      lines.push('')
+      lines.push('> See full detail & definitions per the paths below')
+      lines.push('')
+      lines.push(toMarkdown(value as MapNode, depth + 1))
+    } else {
+      // Directory: use heading for top levels, list for nested
+      if (depth === 0) {
+        lines.push(`# ${key}`)
+        lines.push('')
+        lines.push(toMarkdown(value as MapNode, depth + 1))
+      } else if (depth === 1) {
+        lines.push(`## ${key}/`)
+        lines.push('')
+        lines.push(toMarkdown(value as MapNode, depth + 1))
+      } else {
+        lines.push(`${indent}- **${key}/**`)
+        lines.push(toMarkdown(value as MapNode, depth + 1))
+      }
+    }
+  }
+  
+  return lines.join('\n')
+}
+
+/**
+ * Format content based on output format
+ */
+function formatContent(obj: MapNode, format: OutputFormat): string {
+  if (format === 'md') {
+    return toMarkdown(obj)
+  }
+  return toYaml(obj)
+}
+
+/**
+ * Get file extension for format
+ */
+function getExtension(format: OutputFormat): string {
+  return format === 'md' ? 'md' : 'yaml'
 }
 
 /**

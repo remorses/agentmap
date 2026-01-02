@@ -17,6 +17,7 @@ export type {
   Language,
   MapNode,
   MarkerResult,
+  OutputFormat,
   ZonedOutputOptions,
   ZoneFiles,
   ZoneOutput,
@@ -70,7 +71,7 @@ export async function generateZonedMaps(
     return { fileCount: 0, zoneCount: 0 }
   }
   
-  const outputs = generateZoneOutputs(results, dir, options.outDir)
+  const outputs = generateZoneOutputs(results, dir, options.outDir, options.format)
   
   await writeZoneOutputs(outputs, {
     dryRun: options.dryRun,

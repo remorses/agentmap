@@ -87,11 +87,18 @@ export interface GenerateOptions {
 }
 
 /**
+ * Output format for map files
+ */
+export type OutputFormat = 'yaml' | 'md'
+
+/**
  * Options for zoned output
  */
 export interface ZonedOutputOptions {
   /** Output directory name (default: ".ruler") */
   outDir?: string
+  /** Output format: yaml or md (default: yaml) */
+  format?: OutputFormat
   /** Show what would be written without writing */
   dryRun?: boolean
   /** Show zone resolution details */
