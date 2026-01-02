@@ -1,4 +1,3 @@
-// @agentmap
 // Format map object to YAML string.
 
 import yaml from 'js-yaml'

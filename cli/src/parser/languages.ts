@@ -1,4 +1,3 @@
-// @agentmap
 // Language detection and grammar loading for tree-sitter.
 
 import Parser from 'web-tree-sitter'

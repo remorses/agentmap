@@ -56,33 +56,64 @@ const yaml = await generateMapYaml({
 })
 ```
 
-## Marking Files
+## File Detection
 
-Only files with the `@agentmap` marker comment are included. Add it to the top of files you want in the map:
+Files with a header comment or docstring are automatically included. agentmap detects standard comment styles used in existing projects - no special markers needed.
+
+**TypeScript / JavaScript:**
 
 ```typescript
-// @agentmap
 // CLI entrypoint.
 // Parses args, wires deps, calls into lib/.
 
 export function main() { ... }
 ```
 
+```typescript
+/**
+ * Core data structures.
+ * Used throughout the application.
+ */
+export class App { ... }
+```
+
+**Python:**
+
 ```python
-# @agentmap
-# Parsing + normalization utilities.
+"""
+Parsing and normalization utilities.
+Handles input validation and transformation.
+"""
 
 def parse_input(): ...
 ```
 
-Block comments also work:
+```python
+# Configuration loader.
+# Reads from environment and config files.
 
-```typescript
-/**
- * @agentmap
- * Core data structures.
- */
+def load_config(): ...
 ```
+
+**Rust:**
+
+```rust
+//! HTTP client module.
+//! Provides async request handling.
+
+pub fn fetch() { ... }
+```
+
+**Go:**
+
+```go
+// Package utils provides helper functions.
+// Includes string manipulation and validation.
+
+func Helper() { ... }
+```
+
+Descriptions are limited to the first 20 lines of the header comment.
 
 ## Output Format
 
@@ -136,7 +167,7 @@ Add the plugin to your `opencode.json`:
 }
 ```
 
-The plugin will scan your project for files with `@agentmap` markers and inject the map into the system prompt wrapped in `<agentmap>` tags:
+The plugin will scan your project for files with header comments and inject the map into the system prompt wrapped in `<agentmap>` tags:
 
 ```xml
 <agentmap>

@@ -7,96 +7,128 @@ mappamundi:
         definitions.ts:
           description: Extract top-level definitions using tree-sitter.
           defs:
-            extractArrowFunction: line 439-460, function
-            extractConstName: line 345-372, function
-            extractDefinition: line 125-251, function
-            extractDefinitions: line 87-120, function, exported
-            extractGoName: line 418-434, function
-            extractJSName: line 374-386, function
-            extractMultipleDeclarations: line 256-298, function
-            extractName: line 319-340, function
-            extractPythonName: line 388-396, function
-            extractRustName: line 398-416, function
-            unwrapExport: line 303-314, function
+            extractArrowFunction: line 438-459, function
+            extractConstName: line 344-371, function
+            extractDefinition: line 124-250, function
+            extractDefinitions: line 86-119, function, exported
+            extractGoName: line 417-433, function
+            extractJSName: line 373-385, function
+            extractMultipleDeclarations: line 255-297, function
+            extractName: line 318-339, function
+            extractPythonName: line 387-395, function
+            extractRustName: line 397-415, function
+            findChild: line 464-470, function
+            unwrapExport: line 302-313, function
         git-status.ts:
           description: |-
             Parse git diff output and calculate definition-level diff stats.
             Uses defensive git options for cross-platform reliability.
           defs:
-            applyDiffToDefinitions: line 307-326, function, exported
-            calculateDefinitionDiff: line 225-278, function, exported
-            calculateFileDiff: line 284-302, function, exported
-            getAllDiffData: line 196-217, function, exported
-            normalizePath: line 23-32, function
-            parseDiff: line 114-172, function, exported
-            parseHunkHeader: line 97-108, function, exported
-            parseNumstat: line 57-92, function, exported
-            safeExec: line 37-49, function
+            applyDiffToDefinitions: line 312-331, function, exported
+            calculateDefinitionDiff: line 230-283, function, exported
+            calculateFileDiff: line 289-307, function, exported
+            getAllDiffData: line 197-222, function, exported
+            normalizePath: line 22-31, function
+            parseDiff: line 115-173, function, exported
+            parseHunkHeader: line 98-109, function, exported
+            parseNumstat: line 58-93, function, exported
+            safeExec: line 36-50, function
         marker.ts:
-          description: Extract @agentmap marker and description from file header.
+          description: |-
+            Extract file header comment/docstring using tree-sitter.
+            Detects standard comment styles from existing projects.
           defs:
-            extractDescription: line 83-132, function
-            extractMarker: line 28-60, function, exported
-            isCommentLine: line 65-78, function
-            readHead: line 13-22, function
-            stripCommentPrefix: line 147-156, function
+            extractBlockCommentText: line 194-221, function
+            extractCommentText: line 162-189, function
+            extractConsecutiveComments: line 132-157, function
+            extractHeaderFromAST: line 74-116, function
+            extractMarker: line 39-57, function, exported
+            extractPythonDocstring: line 226-246, function
+            findChild: line 263-269, function
+            getChildren: line 251-258, function
+            isCommentNode: line 121-127, function
+            isDirective: line 62-69, function
+            readFirstLines: line 14-26, function
       index.ts:
         description: Library exports for programmatic usage.
+        defs:
+          generateMap: line 30-35, function, exported
+          generateMapYaml: line 40-51, function, exported
       map:
         builder.ts:
           description: Build the nested map object from file results.
           defs:
-            buildMap: line 10-19, function, exported
-            formatDefinition: line 38-68, function
-            formatFileDiff: line 24-33, function
-            insertFile: line 73-106, function
+            buildMap: line 9-18, function, exported
+            formatDefinition: line 37-69, function
+            formatFileDiff: line 23-32, function
+            getRootName: line 112-118, function, exported
+            insertFile: line 74-107, function
         yaml.ts:
           description: Format map object to YAML string.
           defs:
-            sortKeys: line 10-22, function
-            toYaml: line 27-36, function, exported
+            sortKeys: line 9-21, function
+            toYaml: line 26-35, function, exported
       parser:
         index.ts:
           description: Tree-sitter parser initialization and code parsing.
           defs:
-            parseCode: line 33-41, function, exported
+            getParser: line 22-27, function
+            parseCode: line 32-40, function, exported
+            resetParser: line 45-51, function, exported
         languages.ts:
           description: Language detection and grammar loading for tree-sitter.
           defs:
-            getGrammarPath: line 39-52, function
-            LANGUAGE_EXTENSIONS: line 13-26, const, exported
-            loadGrammar: line 73-83, function, exported
+            ensureParserInit: line 62-67, function
+            getGrammarPath: line 38-51, function
+            LANGUAGE_EXTENSIONS: line 12-25, const, exported
+            loadGrammar: line 72-82, function, exported
       scanner.ts:
-        description: Scan directory for files with @agentmap marker.
+        description: Scan directory for files with header comments/docstrings.
         defs:
-          getGitFiles: line 45-71, function
-          getGlobFiles: line 76-84, function
-          isGitRepo: line 31-38, function
-          processFile: line 155-192, function
-          scanDirectory: line 89-150, function, exported
+          getGitFiles: line 44-70, function
+          getGlobFiles: line 75-83, function
+          isGitRepo: line 30-37, function
+          processFile: line 154-191, function
+          scanDirectory: line 88-149, function, exported
       types.ts:
         description: Core type definitions for the codebase map.
         defs:
-          DefEntry: line 19-21, interface, exported
-          Definition: line 83-90, interface, exported
-          DefinitionDiff: line 74-78, interface, exported
-          DefinitionStatus: line 69, type, exported
-          DefinitionType: line 58-64, type, exported
-          DiffHunk: line 119-124, interface, exported
-          FileDiff: line 129-132, interface, exported
-          FileDiffStats: line 26-29, interface, exported
-          FileEntry: line 34-38, interface, exported
-          FileResult: line 95-100, interface, exported
-          GenerateOptions: line 105-114, interface, exported
-          Language: line 9-14, type, exported
-          MapNode: line 43-45, interface, exported
-          MarkerResult: line 50-53, interface, exported
-          SyntaxNode: line 137, type, exported
-          SyntaxTree: line 138, type, exported
+          DefEntry: line 18-20, interface, exported
+          Definition: line 82-89, interface, exported
+          DefinitionDiff: line 73-77, interface, exported
+          DefinitionStatus: line 68, type, exported
+          DefinitionType: line 57-63, type, exported
+          DiffHunk: line 118-123, interface, exported
+          FileDiff: line 128-131, interface, exported
+          FileDiffStats: line 25-28, interface, exported
+          FileEntry: line 33-37, interface, exported
+          FileResult: line 94-99, interface, exported
+          GenerateOptions: line 104-113, interface, exported
+          Language: line 8-13, type, exported
+          MapNode: line 42-44, interface, exported
+          MarkerResult: line 49-52, interface, exported
+          SyntaxNode: line 136, type, exported
+          SyntaxTree: line 137, type, exported
   opencode:
     src:
       index.ts:
-        description: OpenCode plugin that injects codebase map into system prompt.
+        description: |-
+          @agentmap
+          OpenCode plugin that injects codebase map into system prompt.
         defs:
-          AgentMapPlugin: line 7-31, function, exported
+          AgentMapPlugin: line 86-134, function, exported
+          markersToComments: line 65-72, function
+          truncateDefs: line 15-32, function
+          truncateLines: line 77-84, function
+          truncateMap: line 46-60, function
+  test_temp:
+    test_hash.py:
+      description: |-
+        This is a hash comment header
+        describing the module.
+    test_python.py:
+      description: |-
+        This is a module docstring.
+        It describes what this module does.
 
+        Multi-line support works too.

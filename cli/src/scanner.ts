@@ -1,5 +1,4 @@
-// @agentmap
-// Scan directory for files with @agentmap marker.
+// Scan directory for files with header comments/docstrings.
 
 import { execSync } from 'child_process'
 import fg from 'fast-glob'
@@ -84,7 +83,7 @@ async function getGlobFiles(dir: string): Promise<string[]> {
 }
 
 /**
- * Scan directory and process files with @agentmap marker
+ * Scan directory and process files with header comments
  */
 export async function scanDirectory(options: GenerateOptions = {}): Promise<FileResult[]> {
   const dir = options.dir ?? process.cwd()

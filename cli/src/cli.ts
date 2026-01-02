@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @agentmap
 // CLI entrypoint for generating codebase maps.
 
 import { writeFile } from 'fs/promises'
@@ -9,12 +8,12 @@ import { generateMap, generateMapYaml } from './index.js'
 
 const cli = cac('agentmap')
 
-const NO_FILES_MESSAGE = `No files found with @agentmap marker.
+const NO_FILES_MESSAGE = `No files found with header comments.
 
 To include a file in the map, add a comment at the top:
 
-  // @agentmap
   // Description of this file.
+  // What it does and why.
 
   export function main() { ... }
 

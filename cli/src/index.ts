@@ -1,4 +1,3 @@
-// @agentmap
 // Library exports for programmatic usage.
 
 import { resolve } from 'path'
@@ -6,6 +5,8 @@ import { scanDirectory } from './scanner.js'
 import { buildMap, getRootName } from './map/builder.js'
 import { toYaml } from './map/yaml.js'
 import type { GenerateOptions, MapNode } from './types.js'
+
+export { toYaml } from './map/yaml.js'
 
 export type {
   DefEntry,

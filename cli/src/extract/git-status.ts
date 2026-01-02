@@ -1,4 +1,3 @@
-// @agentmap
 // Parse git diff output and calculate definition-level diff stats.
 // Uses defensive git options for cross-platform reliability.
 

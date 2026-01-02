@@ -1,4 +1,3 @@
-// @agentmap
 // Build the nested map object from file results.
 
 import { basename } from 'path'

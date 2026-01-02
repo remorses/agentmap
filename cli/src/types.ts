@@ -1,4 +1,3 @@
-// @agentmap
 // Core type definitions for the codebase map.
 
 import type Parser from 'web-tree-sitter'
