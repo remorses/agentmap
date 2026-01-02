@@ -44,12 +44,23 @@ export interface MarkerResult {
 }
 
 /**
+ * Types of definitions we extract
+ */
+export type DefinitionType = 
+  | 'function' 
+  | 'class' 
+  | 'type' 
+  | 'interface' 
+  | 'const' 
+  | 'enum'
+
+/**
  * A definition extracted from source code
  */
 export interface Definition {
   name: string
   line: number  // 1-based
-  type: 'function' | 'class'
+  type: DefinitionType
 }
 
 /**
