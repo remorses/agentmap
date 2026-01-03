@@ -49,6 +49,8 @@ export interface MapNode {
 export interface MarkerResult {
   found: boolean
   description?: string
+  /** Submap path from marker (e.g., ".", "..", "src/common") */
+  submap?: string
 }
 
 /**
@@ -95,6 +97,8 @@ export interface FileResult {
   relativePath: string
   description?: string
   definitions: Definition[]
+  /** Resolved submap path (absolute from project root, e.g., "./" or "src/common/") */
+  submap: string
   diff?: FileDiffStats  // only present when --diff flag used
 }
 
@@ -128,6 +132,49 @@ export interface DiffHunk {
 export interface FileDiff {
   path: string
   hunks: DiffHunk[]
+}
+
+/**
+ * Output format for map files
+ */
+export type OutputFormat = 'yaml' | 'md'
+
+/**
+ * Options for submap output
+ */
+export interface SubmapOutputOptions {
+  /** Subdirectory for map files (e.g., ".ruler") */
+  outDir?: string
+  /** Output filename (default: "map.yaml") */
+  outputFile?: string
+  /** Output format: yaml or md (default: yaml) */
+  format?: OutputFormat
+  /** Show what would be written without writing */
+  dryRun?: boolean
+  /** Show submap resolution details */
+  verbose?: boolean
+}
+
+/**
+ * A submap with its files
+ */
+export interface SubmapFiles {
+  /** Submap path (e.g., "./" for root, "src/common/") */
+  submap: string
+  /** Files belonging to this submap */
+  files: FileResult[]
+}
+
+/**
+ * Output plan for a submap
+ */
+export interface SubmapOutput {
+  /** Path where map.yaml will be written */
+  outputPath: string
+  /** Submap path */
+  submap: string
+  /** YAML content */
+  content: string
 }
 
 /**

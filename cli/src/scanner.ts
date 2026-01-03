@@ -4,7 +4,7 @@ import { execSync } from 'child_process'
 import fg from 'fast-glob'
 import picomatch from 'picomatch'
 import { readFile } from 'fs/promises'
-import { join, normalize } from 'path'
+import { join, normalize, dirname, relative } from 'path'
 import { extractMarker } from './extract/marker.js'
 import { extractDefinitions } from './extract/definitions.js'
 import { getAllDiffData, applyDiffToDefinitions } from './extract/git-status.js'
@@ -149,6 +149,38 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<File
 }
 
 /**
+ * Resolve submap path to absolute path from project root
+ * 
+ * @param submap - Submap from marker (e.g., ".", "..", "src/common")
+ * @param relativePath - File's path relative to project root
+ * @returns Resolved submap path (e.g., "./" for root, "src/common/")
+ */
+function resolveSubmap(submap: string | undefined, relativePath: string): string {
+  // No submap = root
+  if (!submap) {
+    return './'
+  }
+  
+  // Get file's directory
+  const fileDir = dirname(relativePath)
+  
+  // Relative submap (starts with .)
+  if (submap.startsWith('.')) {
+    // Resolve relative to file's directory
+    const resolved = normalize(join(fileDir, submap))
+    // Ensure it doesn't go above project root
+    if (resolved.startsWith('..')) {
+      return './'
+    }
+    // Normalize to ./ for root, otherwise add trailing slash
+    return resolved === '.' ? './' : resolved + '/'
+  }
+  
+  // Absolute submap (from project root)
+  return submap.endsWith('/') ? submap : submap + '/'
+}
+
+/**
  * Process a single file - check for marker and extract definitions
  */
 async function processFile(
@@ -181,10 +213,14 @@ async function processFile(
     definitions = applyDiffToDefinitions(definitions, fileDiff)
   }
 
+  // Resolve submap
+  const submap = resolveSubmap(marker.submap, relativePath)
+
   return {
     relativePath,
     description: marker.description,
     definitions,
+    submap,
     // Use pre-calculated file stats from --numstat (more reliable)
     diff: fileStats,
   }

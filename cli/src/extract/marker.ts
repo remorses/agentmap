@@ -9,6 +9,17 @@ const MAX_LINES = 50
 const MAX_DESC_LINES = 20
 
 /**
+ * Regex to match @agentmap marker with optional submap
+ * Captures: submap (optional, the part after :)
+ * Examples:
+ *   @agentmap        -> submap: undefined
+ *   @agentmap:.      -> submap: "."
+ *   @agentmap:..     -> submap: ".."
+ *   @agentmap:src/common -> submap: "src/common"
+ */
+const SUBMAP_REGEX = /@agentmap(?::([^\s*]+))?/
+
+/**
  * Read the first N lines of a file
  */
 async function readFirstLines(filepath: string, maxLines: number): Promise<string> {
@@ -50,9 +61,18 @@ export async function extractMarker(filepath: string): Promise<MarkerResult> {
     return { found: false }
   }
 
+  // Extract submap from @agentmap marker if present in description
+  // (only check description, not raw file content, to avoid false positives in strings)
+  const submapMatch = description ? SUBMAP_REGEX.exec(description) : null
+  const submap = submapMatch?.[1]
+
+  // Clean the @agentmap marker from description if present
+  const cleanDesc = description.replace(SUBMAP_REGEX, '').trim()
+
   return {
     found: true,
-    description: description || undefined,
+    description: cleanDesc || undefined,
+    submap,
   }
 }
 
