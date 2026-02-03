@@ -6,3 +6,4 @@ dist/
 test_temp
 tmp
 .DS_Store
+opensrc
