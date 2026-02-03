@@ -74,25 +74,30 @@ For each important file, add a descriptive comment at the top (before any import
 - If the file is an entry point (CLI, main, server start, etc.), mark it as such in the description
 - If the file already has a top comment, review and update it to be accurate and descriptive - don't skip it
 - If the file has a shebang (#!/...), keep it as the first line and add the description comment immediately after
+- Ensure the description comment appears above any import statements in the file
 
 Examples:
 
 TypeScript/JavaScript:
 // CLI entrypoint for the application.
 // Parses command-line arguments and orchestrates the main workflow.
+import { run } from "./runner"
 
 Python:
 # Database connection manager.
 # Handles connection pooling and provides transaction helpers.
+import asyncio
 
 Rust:
 //! HTTP server module.
 //! Entry point for the web API, configures routes and middleware.
+use crate::server::start
 
 With shebang (shell scripts, node CLI, etc.):
 #!/usr/bin/env node
 // CLI entrypoint for the build tool.
 // Handles argument parsing and runs the build pipeline.
+import { build } from "./build"
 
 After adding comments to all important files, run \`npx -y agentmap\` to verify the files appear in the generated map.
 

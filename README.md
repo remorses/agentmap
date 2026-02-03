@@ -108,13 +108,14 @@ npx agentmap prompt
 
 **File Detection**
 
-Files with a header comment or docstring are automatically included. agentmap detects standard comment styles used in existing projects - no special markers needed.
+Files with a header comment or docstring are automatically included. agentmap detects standard comment styles used in existing projects - no special markers needed. Place the header comment above any import statements in the file.
 
 **TypeScript / JavaScript:**
 
 ```typescript
 // CLI entrypoint.
 // Parses args, wires deps, calls into lib/.
+import { parseArgs } from "./args"
 
 export function main() { ... }
 ```
@@ -124,6 +125,8 @@ export function main() { ... }
  * Core data structures.
  * Used throughout the application.
  */
+import type { Config } from "./config"
+
 export class App { ... }
 ```
 
@@ -135,12 +138,16 @@ Parsing and normalization utilities.
 Handles input validation and transformation.
 """
 
+from .schema import InputSchema
+
 def parse_input(): ...
 ```
 
 ```python
 # Configuration loader.
 # Reads from environment and config files.
+
+import os
 
 def load_config(): ...
 ```
@@ -151,6 +158,8 @@ def load_config(): ...
 //! HTTP client module.
 //! Provides async request handling.
 
+use crate::http::client
+
 pub fn fetch() { ... }
 ```
 
@@ -159,6 +168,8 @@ pub fn fetch() { ... }
 ```go
 // Package utils provides helper functions.
 // Includes string manipulation and validation.
+
+import "strings"
 
 func Helper() { ... }
 ```
