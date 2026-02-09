@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+- Update to use agentmap 0.8.0 with submodule support
+- Submodules now appear in the generated codebase map with branch and commit info
+
 ## 0.4.0
 
 - Include git diff info in generated map by default

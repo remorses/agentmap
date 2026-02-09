@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0
+
+- Add submodule detection and display in the codebase map
+- Submodules show their checked-out branch, short commit SHA, and dirty state (e.g. `submodule: "main @ a1b2c3d"`)
+- Detached HEAD and uninitialized submodules are labeled accordingly
+- Filter submodule paths from git diff output to prevent misleading stats (pointer changes were showing as `+1-1`)
+- Add `--no-submodules` CLI flag to exclude submodule info from the map
+- New types exported: `SubmoduleInfo`, `SubmoduleEntry`
+
 ## 0.7.1
 
 - Update `prompt` command to include AGENTS.md/CLAUDE.md snippet for keeping file comments updated
