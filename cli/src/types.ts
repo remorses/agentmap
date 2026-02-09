@@ -40,10 +40,36 @@ export interface FileEntry {
 }
 
 /**
- * Recursive map node - either a directory (with children) or a file entry
+ * A submodule entry in the map
+ */
+export interface SubmoduleEntry {
+  submodule: string   // "branch @ sha" or "detached @ sha"
+  dirty?: string      // "modified" if submodule has uncommitted changes
+}
+
+/**
+ * Info about a git submodule discovered in the repo
+ */
+export interface SubmoduleInfo {
+  /** Relative path of the submodule in the parent repo */
+  path: string
+  /** Current HEAD commit SHA (short) */
+  commit: string
+  /** Checked-out branch name, or undefined if detached HEAD */
+  branch?: string
+  /** Remote URL from .gitmodules */
+  url?: string
+  /** Whether the submodule has uncommitted changes */
+  dirty?: boolean
+  /** Whether the submodule is initialized */
+  initialized: boolean
+}
+
+/**
+ * Recursive map node - either a directory (with children), a file entry, or a submodule entry
  */
 export interface MapNode {
-  [name: string]: MapNode | FileEntry
+  [name: string]: MapNode | FileEntry | SubmoduleEntry
 }
 
 /**
@@ -121,6 +147,8 @@ export interface GenerateOptions {
   diffBase?: string
   /** Max definitions per file before truncation (default: 25) */
   maxDefs?: number
+  /** Include submodule info in the map (default: true) */
+  submodules?: boolean
 }
 
 /**

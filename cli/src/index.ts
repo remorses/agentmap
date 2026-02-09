@@ -26,6 +26,8 @@ export type {
   Language,
   MapNode,
   MarkerResult,
+  SubmoduleEntry,
+  SubmoduleInfo,
 } from './types.js'
 
 /**
@@ -64,8 +66,8 @@ export async function generateMap(options: GenerateOptions = {}): Promise<MapNod
     return { [rootName]: {} }
   }
 
-  const results = await scanDirectory({ ...options, dir })
-  const map = buildMap(results, rootName)
+  const { files, submodules } = await scanDirectory({ ...options, dir })
+  const map = buildMap(files, rootName, submodules)
   
   // Apply truncation (default 25)
   const maxDefs = options.maxDefs ?? DEFAULT_MAX_DEFS
@@ -84,14 +86,14 @@ export async function generateMapYaml(options: GenerateOptions = {}): Promise<st
     return ''
   }
 
-  const results = await scanDirectory({ ...options, dir })
+  const { files, submodules } = await scanDirectory({ ...options, dir })
 
-  if (results.length === 0) {
+  if (files.length === 0 && submodules.length === 0) {
     return ''
   }
 
   const rootName = getRootName(dir)
-  const map = buildMap(results, rootName)
+  const map = buildMap(files, rootName, submodules)
   
   // Apply truncation (default 25)
   const maxDefs = options.maxDefs ?? DEFAULT_MAX_DEFS

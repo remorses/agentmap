@@ -1,6 +1,6 @@
 // Truncate definitions in map to limit context size.
 
-import type { DefEntry, FileEntry, MapNode } from '../types.js'
+import type { DefEntry, FileEntry, MapNode, SubmoduleEntry } from '../types.js'
 
 const DEFAULT_MAX_DEFS = 25
 
@@ -18,6 +18,14 @@ function isFileEntry(value: unknown): value is FileEntry {
   if (!value || typeof value !== 'object') return false
   const obj = value as Record<string, unknown>
   return 'description' in obj || 'defs' in obj
+}
+
+/**
+ * Check if a value is a SubmoduleEntry (has submodule key)
+ */
+function isSubmoduleEntry(value: unknown): value is SubmoduleEntry {
+  if (!value || typeof value !== 'object') return false
+  return 'submodule' in (value as Record<string, unknown>)
 }
 
 /**
@@ -78,6 +86,9 @@ export function truncateMap(node: MapNode, maxDefs: number = DEFAULT_MAX_DEFS): 
   for (const [key, value] of Object.entries(node)) {
     if (isFileEntry(value)) {
       result[key] = truncateDefs(value, maxDefs)
+    } else if (isSubmoduleEntry(value)) {
+      // Submodule entries pass through unchanged (no defs to truncate)
+      result[key] = value
     } else if (value && typeof value === 'object') {
       result[key] = truncateMap(value as MapNode, maxDefs)
     } else {

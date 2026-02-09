@@ -8,8 +8,9 @@ import { join, normalize } from 'path'
 import { extractMarkerFromCode, extractMarkdownDescription } from './extract/marker.js'
 import { extractDefinitions } from './extract/definitions.js'
 import { getAllDiffData, applyDiffToDefinitions } from './extract/git-status.js'
+import { getSubmodules, getSubmodulePaths } from './extract/submodules.js'
 import { parseCode, detectLanguage, LANGUAGE_EXTENSIONS } from './parser/index.js'
-import type { FileResult, GenerateOptions, FileDiff, FileDiffStats } from './types.js'
+import type { FileResult, GenerateOptions, FileDiff, FileDiffStats, SubmoduleInfo } from './types.js'
 
 /**
  * Maximum number of files to process (safety limit)
@@ -65,17 +66,47 @@ function getGitFiles(dir: string): string[] {
 
 
 /**
+ * Result of scanning a directory, including both file results and submodule info
+ */
+export interface ScanResult {
+  files: FileResult[]
+  submodules: SubmoduleInfo[]
+}
+
+/**
  * Scan directory and process files with header comments
  */
-export async function scanDirectory(options: GenerateOptions = {}): Promise<FileResult[]> {
+export async function scanDirectory(options: GenerateOptions = {}): Promise<ScanResult> {
   const dir = options.dir ?? process.cwd()
   // Filter out null/undefined/empty patterns (cac can pass [null] when option not used)
   const ignorePatterns = (options.ignore ?? []).filter((p): p is string => !!p)
   const filterPatterns = (options.filter ?? []).filter((p): p is string => !!p)
   const includeDiff = options.diff ?? false
+  const includeSubmodules = options.submodules !== false // default true
+
+  // Detect submodules first (needed for both map entries and diff filtering)
+  let submodules: SubmoduleInfo[] = []
+  let submodulePathSet: Set<string> = new Set()
+  if (includeSubmodules) {
+    submodules = getSubmodules(dir)
+    submodulePathSet = new Set(submodules.map(s => s.path))
+  } else {
+    // Even when not showing submodules, detect paths for diff filtering
+    submodulePathSet = getSubmodulePaths(dir)
+  }
+
+  // Build a normalized set for filtering (handles Windows backslash paths)
+  const normalizedSubmodulePaths = new Set<string>()
+  for (const p of submodulePathSet) {
+    normalizedSubmodulePaths.add(normalize(p))
+  }
 
   // Get file list from git (caller should ensure we're in a git repo)
   let files = getGitFiles(dir)
+
+  // Filter out submodule gitlink entries (they appear as paths in ls-files)
+  // Use normalized paths to handle Windows backslash vs forward slash differences
+  files = files.filter(f => !normalizedSubmodulePaths.has(f))
 
   // Filter by supported extensions or README files
   files = files.filter(f => isSupportedFile(f) || isReadmeFile(f))
@@ -95,7 +126,7 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<File
   // Safety check: bail if too many files to avoid scanning huge directories
   if (files.length > MAX_FILES) {
     console.error(`Warning: Too many files (${files.length} > ${MAX_FILES}), skipping scan`)
-    return []
+    return { files: [], submodules }
   }
 
   // Get git diff data if needed (isolated from main processing)
@@ -104,7 +135,7 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<File
   
   if (includeDiff) {
     try {
-      const diffData = getAllDiffData(dir)
+      const diffData = getAllDiffData(dir, submodulePathSet)
       fileStats = diffData.fileStats
       fileDiffs = diffData.fileDiffs
     } catch {
@@ -136,7 +167,10 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<File
   })
 
   const results = await Promise.all(resultPromises)
-  return results.filter((r): r is FileResult => r !== null)
+  return {
+    files: results.filter((r): r is FileResult => r !== null),
+    submodules,
+  }
 }
 
 /**

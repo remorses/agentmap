@@ -12,16 +12,22 @@ function isReadme(key: string): boolean {
 }
 
 /**
- * Custom key sorter: description first, then diff, then defs/exports, then README files, then alphabetical
+ * Custom key sorter: description first, then submodule/dirty, then diff, then defs/exports, then README files, then alphabetical
  */
 function sortKeys(a: string, b: string): number {
   // description always first
   if (a === 'description') return -1
   if (b === 'description') return 1
-  // diff second
+  // submodule second (for submodule entries)
+  if (a === 'submodule') return -1
+  if (b === 'submodule') return 1
+  // dirty third (for submodule entries)
+  if (a === 'dirty') return -1
+  if (b === 'dirty') return 1
+  // diff fourth
   if (a === 'diff') return -1
   if (b === 'diff') return 1
-  // defs/exports third
+  // defs/exports fifth
   if (a === 'defs' || a === 'exports') return -1
   if (b === 'defs' || b === 'exports') return 1
   // README files come before other files

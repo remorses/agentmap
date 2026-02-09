@@ -192,9 +192,11 @@ export function getHunkDiff(dir: string): Map<string, FileDiff> {
 
 /**
  * Combined function to get all diff data needed
- * Returns both file stats and hunk data, with error isolation
+ * Returns both file stats and hunk data, with error isolation.
+ * Filters out submodule paths to prevent misleading stats (submodule pointer
+ * changes show as 1/1 in numstat, and produce "Subproject commit" pseudo-diffs).
  */
-export function getAllDiffData(dir: string): {
+export function getAllDiffData(dir: string, submodulePaths?: Set<string>): {
   fileStats: Map<string, FileDiffStats>
   fileDiffs: Map<string, FileDiff>
 } {
@@ -216,6 +218,16 @@ export function getAllDiffData(dir: string): {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`Warning: failed to get hunk diff: ${message}`)
     fileDiffs = new Map()
+  }
+
+  // Filter out submodule paths - their diff output is misleading:
+  // - numstat shows 1/1 for pointer changes (not real line counts)
+  // - unified diff shows "Subproject commit" pseudo-patches
+  if (submodulePaths && submodulePaths.size > 0) {
+    for (const subPath of submodulePaths) {
+      fileStats.delete(subPath)
+      fileDiffs.delete(subPath)
+    }
   }
 
   return { fileStats, fileDiffs }

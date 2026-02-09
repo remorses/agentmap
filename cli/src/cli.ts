@@ -25,7 +25,8 @@ cli
   .option('-o, --output <file>', 'Write output to file (default: stdout)')
   .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)', { type: [] })
   .option('-f, --filter <pattern>', 'Filter pattern - only include matching files (can be repeated)', { type: [] })
-  .action(async (dir: string | undefined, options: { output?: string; ignore?: string[]; filter?: string[] }) => {
+  .option('--no-submodules', 'Exclude submodule info from the map')
+  .action(async (dir: string | undefined, options: { output?: string; ignore?: string[]; filter?: string[]; submodules?: boolean }) => {
     const targetDir = resolve(dir ?? '.')
 
     try {
@@ -34,6 +35,7 @@ cli
         ignore: options.ignore,
         filter: options.filter,
         diff: true,
+        submodules: options.submodules,
       })
 
       // Check if map is empty (only has root key with empty object)

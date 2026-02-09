@@ -1,16 +1,23 @@
 // Build the nested map object from file results.
 
 import { basename } from 'path'
-import type { Definition, FileEntry, FileResult, FileDiffStats, MapNode } from '../types.js'
+import type { Definition, FileEntry, FileResult, FileDiffStats, MapNode, SubmoduleEntry, SubmoduleInfo } from '../types.js'
 
 /**
- * Build a nested map object from file results
+ * Build a nested map object from file results and submodule info
  */
-export function buildMap(results: FileResult[], rootName: string): MapNode {
+export function buildMap(results: FileResult[], rootName: string, submodules?: SubmoduleInfo[]): MapNode {
   const root: MapNode = {}
 
   for (const result of results) {
     insertFile(root, result)
+  }
+
+  // Insert submodule entries
+  if (submodules) {
+    for (const sub of submodules) {
+      insertSubmodule(root, sub)
+    }
   }
 
   // Wrap in root name
@@ -105,6 +112,42 @@ function insertFile(root: MapNode, result: FileResult): void {
   }
 
   current[filename] = entry
+}
+
+/**
+ * Insert a submodule entry into the map at its path location.
+ * Format: "branch @ sha" or "detached @ sha" or "uninitialized @ sha"
+ */
+function insertSubmodule(root: MapNode, sub: SubmoduleInfo): void {
+  const parts = sub.path.split('/')
+  let current = root
+
+  // Navigate/create directory structure for nested submodule paths
+  for (let i = 0; i < parts.length - 1; i++) {
+    const dir = parts[i]
+    if (!current[dir]) {
+      current[dir] = {}
+    }
+    current = current[dir] as MapNode
+  }
+
+  // Build the submodule label
+  let label: string
+  if (!sub.initialized) {
+    label = `uninitialized @ ${sub.commit}`
+  } else if (sub.branch) {
+    label = `${sub.branch} @ ${sub.commit}`
+  } else {
+    label = `detached @ ${sub.commit}`
+  }
+
+  const entry: SubmoduleEntry = { submodule: label }
+  if (sub.dirty) {
+    entry.dirty = 'modified'
+  }
+
+  const name = parts[parts.length - 1]
+  current[name] = entry
 }
 
 /**
