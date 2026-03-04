@@ -2,7 +2,7 @@
 // OpenCode plugin that injects codebase map into system prompt.
 
 import type { Plugin } from '@opencode-ai/plugin'
-import { generateMapYaml } from 'agentmap'
+import { generateMapYaml } from 'agentmap/src/index'
 
 const MAX_LINES = 1000
 
@@ -25,13 +25,13 @@ export const AgentMapPlugin: Plugin = async ({ directory }) => {
 
         if (!cachedYaml) {
           let yaml = await generateMapYaml({ dir: directory, diff: true })
-          
+
           // Truncate to max lines
           const lines = yaml.split('\n')
           if (lines.length > MAX_LINES) {
             yaml = lines.slice(0, MAX_LINES).join('\n') + '\n# ... truncated'
           }
-          
+
           cachedYaml = yaml
         }
 

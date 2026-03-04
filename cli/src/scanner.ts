@@ -52,7 +52,7 @@ function getGitFiles(dir: string): string[] {
       maxBuffer,
       encoding: 'utf8',
     })
-    
+
     return stdout
       .split(/\r?\n/)
       .map(x => x.trim())
@@ -132,7 +132,7 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
   // Get git diff data if needed (isolated from main processing)
   let fileStats: Map<string, FileDiffStats> | null = null
   let fileDiffs: Map<string, FileDiff> | null = null
-  
+
   if (includeDiff) {
     try {
       const diffData = getAllDiffData(dir, submodulePathSet)
@@ -147,20 +147,20 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
 
   // Process files in parallel with concurrency limit
   const limit = pLimit(20)
-  
+
   const resultPromises = files.map(relativePath => {
     const fullPath = join(dir, relativePath)
     // Normalize path for lookup (handle Windows backslashes)
     const normalizedPath = relativePath.replace(/\\/g, '/')
     const fileDiff = fileDiffs?.get(normalizedPath)
     const stats = fileStats?.get(normalizedPath)
-    
+
     return limit(async () => {
       try {
         return await processFile(fullPath, relativePath, fileDiff, stats)
       } catch (err) {
         // Skip files that fail to process
-        console.error(`Warning: Failed to process ${relativePath}:`, err)
+        // console.error(`Warning: Failed to process ${relativePath}:`, err)
         return null
       }
     })
