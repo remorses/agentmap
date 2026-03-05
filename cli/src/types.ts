@@ -1,6 +1,7 @@
 // Core type definitions for the codebase map.
 
 import type Parser from 'web-tree-sitter'
+import type { Logger } from './logger.js'
 
 /**
  * Supported programming languages
@@ -149,6 +150,8 @@ export interface GenerateOptions {
   maxDefs?: number
   /** Include submodule info in the map (default: true) */
   submodules?: boolean
+  /** Logger implementation (default: console logger) */
+  logger?: Logger
 }
 
 /**

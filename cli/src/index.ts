@@ -11,6 +11,8 @@ import type { GenerateOptions, MapNode } from './types.js'
 
 export { toYaml } from './map/yaml.js'
 export { truncateMap, truncateDefs } from './map/truncate.js'
+export { createConsoleLogger, createNoopLogger, formatLogMessage } from './logger.js'
+export type { Logger } from './logger.js'
 
 export type {
   DefEntry,

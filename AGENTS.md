@@ -56,3 +56,14 @@ The `@agentmap/opencode` package depends on `agentmap` using the workspace proto
 ```
 
 This gets replaced with the actual version (e.g., `^0.2.0`) when publishing with bun.
+
+## Logging
+
+Never use `console.log`, `console.error`, `console.warn`, `console.info`, or `console.debug` in runtime code.
+
+Use the shared logger abstraction and pass it with dependency injection instead. This prevents console output from breaking the OpenCode terminal UI.
+
+In the OpenCode plugin, override the logger behavior to:
+
+- show OpenCode toast notifications only for `error`
+- suppress normal logs/info output in the TUI

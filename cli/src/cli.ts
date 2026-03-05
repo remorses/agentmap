@@ -5,8 +5,10 @@ import { writeFile } from 'fs/promises'
 import { resolve } from 'path'
 import { cac } from 'cac'
 import { generateMap, toYaml } from './index.js'
+import { createConsoleLogger } from './logger.js'
 
 const cli = cac('agentmap')
+const logger = createConsoleLogger()
 
 const NO_FILES_MESSAGE = `No files found with header comments.
 
@@ -36,13 +38,14 @@ cli
         filter: options.filter,
         diff: true,
         submodules: options.submodules,
+        logger,
       })
 
       // Check if map is empty (only has root key with empty object)
       const rootKey = Object.keys(map)[0]
       const rootValue = map[rootKey]
       if (!rootValue || Object.keys(rootValue).length === 0) {
-        console.error(NO_FILES_MESSAGE)
+        logger.warn(NO_FILES_MESSAGE.trimEnd())
         process.exit(0)
       }
 
@@ -50,12 +53,12 @@ cli
 
       if (options.output) {
         await writeFile(options.output, yaml, 'utf8')
-        console.error(`Wrote map to ${options.output}`)
+        logger.info(`Wrote map to ${options.output}`)
       } else {
-        console.log(yaml)
+        process.stdout.write(yaml.endsWith('\n') ? yaml : `${yaml}\n`)
       }
     } catch (err) {
-      console.error('Error:', err instanceof Error ? err.message : err)
+      logger.error('Error:', err instanceof Error ? err.message : err)
       process.exit(1)
     }
   })
@@ -125,7 +128,7 @@ For OpenCode users, also set up the agentmap plugin so future sessions automatic
 cli
   .command('prompt', 'Generate a prompt to help AI agents add file descriptions')
   .action(() => {
-    console.log(PROMPT_TEXT)
+    process.stdout.write(`${PROMPT_TEXT}\n`)
   })
 
 cli.help()

@@ -2,13 +2,31 @@
 // OpenCode plugin that injects codebase map into system prompt.
 
 import type { Plugin } from '@opencode-ai/plugin'
+import { formatLogMessage } from 'agentmap/src/logger'
+import type { Logger } from 'agentmap/src/logger'
 import { generateMapYaml } from 'agentmap/src/index'
 
 const MAX_LINES = 1000
 
-export const AgentMapPlugin: Plugin = async ({ directory }) => {
+export const AgentMapPlugin: Plugin = async ({ directory, client }) => {
   let cachedYaml: string | undefined
   let lastSessionID: string | undefined
+
+  const logger: Logger = {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: (...args) => {
+      const message = formatLogMessage(args)
+      void client.tui.showToast({
+        body: {
+          title: 'agentmap',
+          message,
+          variant: 'error',
+        },
+      }).catch(() => {})
+    },
+  }
 
   return {
     'chat.message': async ({ sessionID }) => {
@@ -24,7 +42,7 @@ export const AgentMapPlugin: Plugin = async ({ directory }) => {
         if (output.system.some((s) => s.includes('<agentmap>'))) return
 
         if (!cachedYaml) {
-          let yaml = await generateMapYaml({ dir: directory, diff: true })
+          let yaml = await generateMapYaml({ dir: directory, diff: true, logger })
 
           // Truncate to max lines
           const lines = yaml.split('\n')
@@ -53,7 +71,7 @@ When making significant changes to a file's purpose or responsibilities, update 
 These descriptions appear in the agentmap XML at the start of every agent session.
 </agentmap-instructions>`)
       } catch (err) {
-        console.error('[agentmap] Failed to generate map:', err)
+        logger.error('[agentmap] Failed to generate map:', err)
       }
     },
   }

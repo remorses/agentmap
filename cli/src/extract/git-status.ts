@@ -2,7 +2,9 @@
 // Uses defensive git options for cross-platform reliability.
 
 import { execSync } from 'child_process'
+import { createConsoleLogger } from '../logger.js'
 import type { Definition, DefinitionDiff, DiffHunk, FileDiff, FileDiffStats } from '../types.js'
+import type { Logger } from '../logger.js'
 
 /**
  * Defensive git options to ensure consistent output across platforms/configs
@@ -33,7 +35,7 @@ function normalizePath(path: string): string {
 /**
  * Safely execute a git command, returning empty string on any error
  */
-function safeExec(cmd: string, dir: string): string {
+function safeExec(cmd: string, dir: string, logger: Logger): string {
   try {
     return execSync(cmd, {
       cwd: dir,
@@ -42,9 +44,8 @@ function safeExec(cmd: string, dir: string): string {
       stdio: ['pipe', 'pipe', 'pipe'], // Capture stderr too
     })
   } catch (err) {
-    // Log error so user knows something happened
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`Warning: git diff failed: ${message}`)
+    logger.warn(`Warning: git diff failed: ${message}`)
     return ''
   }
 }
@@ -175,18 +176,18 @@ export function parseDiff(diffOutput: string): Map<string, FileDiff> {
 /**
  * Get file-level diff stats using --numstat (most reliable)
  */
-export function getFileStats(dir: string): Map<string, FileDiffStats> {
+export function getFileStats(dir: string, logger: Logger = createConsoleLogger()): Map<string, FileDiffStats> {
   const cmd = `git diff ${GIT_DIFF_OPTIONS} --numstat HEAD`
-  const output = safeExec(cmd, dir)
+  const output = safeExec(cmd, dir, logger)
   return parseNumstat(output)
 }
 
 /**
  * Get hunk-level diff for definition analysis
  */
-export function getHunkDiff(dir: string): Map<string, FileDiff> {
+export function getHunkDiff(dir: string, logger: Logger = createConsoleLogger()): Map<string, FileDiff> {
   const cmd = `git diff ${GIT_DIFF_OPTIONS} --unified=0 HEAD`
-  const output = safeExec(cmd, dir)
+  const output = safeExec(cmd, dir, logger)
   return parseDiff(output)
 }
 
@@ -199,24 +200,36 @@ export function getHunkDiff(dir: string): Map<string, FileDiff> {
 export function getAllDiffData(dir: string, submodulePaths?: Set<string>): {
   fileStats: Map<string, FileDiffStats>
   fileDiffs: Map<string, FileDiff>
+}
+export function getAllDiffData(dir: string, submodulePaths: Set<string> | undefined, logger: Logger): {
+  fileStats: Map<string, FileDiffStats>
+  fileDiffs: Map<string, FileDiff>
+}
+export function getAllDiffData(
+  dir: string,
+  submodulePaths?: Set<string>,
+  logger: Logger = createConsoleLogger()
+): {
+  fileStats: Map<string, FileDiffStats>
+  fileDiffs: Map<string, FileDiff>
 } {
   // Get file stats (for file-level +N-M display)
   let fileStats: Map<string, FileDiffStats>
   try {
-    fileStats = getFileStats(dir)
+    fileStats = getFileStats(dir, logger)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`Warning: failed to get file stats: ${message}`)
+    logger.warn(`Warning: failed to get file stats: ${message}`)
     fileStats = new Map()
   }
 
   // Get hunk data (for definition-level analysis)
   let fileDiffs: Map<string, FileDiff>
   try {
-    fileDiffs = getHunkDiff(dir)
+    fileDiffs = getHunkDiff(dir, logger)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`Warning: failed to get hunk diff: ${message}`)
+    logger.warn(`Warning: failed to get hunk diff: ${message}`)
     fileDiffs = new Map()
   }
 

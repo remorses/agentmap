@@ -9,6 +9,7 @@ import { extractMarkerFromCode, extractMarkdownDescription } from './extract/mar
 import { extractDefinitions } from './extract/definitions.js'
 import { getAllDiffData, applyDiffToDefinitions } from './extract/git-status.js'
 import { getSubmodules, getSubmodulePaths } from './extract/submodules.js'
+import { createConsoleLogger } from './logger.js'
 import { parseCode, detectLanguage, LANGUAGE_EXTENSIONS } from './parser/index.js'
 import type { FileResult, GenerateOptions, FileDiff, FileDiffStats, SubmoduleInfo } from './types.js'
 
@@ -78,6 +79,7 @@ export interface ScanResult {
  */
 export async function scanDirectory(options: GenerateOptions = {}): Promise<ScanResult> {
   const dir = options.dir ?? process.cwd()
+  const logger = options.logger ?? createConsoleLogger()
   // Filter out null/undefined/empty patterns (cac can pass [null] when option not used)
   const ignorePatterns = (options.ignore ?? []).filter((p): p is string => !!p)
   const filterPatterns = (options.filter ?? []).filter((p): p is string => !!p)
@@ -125,7 +127,7 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
 
   // Safety check: bail if too many files to avoid scanning huge directories
   if (files.length > MAX_FILES) {
-    console.error(`Warning: Too many files (${files.length} > ${MAX_FILES}), skipping scan`)
+    logger.warn(`Warning: Too many files (${files.length} > ${MAX_FILES}), skipping scan`)
     return { files: [], submodules }
   }
 
@@ -135,7 +137,7 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
 
   if (includeDiff) {
     try {
-      const diffData = getAllDiffData(dir, submodulePathSet)
+      const diffData = getAllDiffData(dir, submodulePathSet, logger)
       fileStats = diffData.fileStats
       fileDiffs = diffData.fileDiffs
     } catch {
@@ -158,9 +160,8 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
     return limit(async () => {
       try {
         return await processFile(fullPath, relativePath, fileDiff, stats)
-      } catch (err) {
+      } catch {
         // Skip files that fail to process
-        // console.error(`Warning: Failed to process ${relativePath}:`, err)
         return null
       }
     })
