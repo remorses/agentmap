@@ -19,7 +19,7 @@ bun --filter cli build   # Build specific package
 
 **Important**: Use `bun publish` instead of `npm publish`.
 
-Bun automatically replaces `workspace:*` protocol with the actual version number when publishing. npm does not support this and will fail.
+Bun automatically replaces `workspace:^` protocol with the actual version number when publishing. npm does not support this and will fail.
 
 ```bash
 cd cli && bun publish      # Publish agentmap
@@ -50,7 +50,7 @@ The `@agentmap/opencode` package depends on `agentmap` using the workspace proto
 ```json
 {
   "dependencies": {
-    "agentmap": "workspace:*"
+    "agentmap": "workspace:^"
   }
 }
 ```
