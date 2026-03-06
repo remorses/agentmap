@@ -3,12 +3,29 @@
 
 import { writeFile } from 'fs/promises'
 import { resolve } from 'path'
-import { cac } from 'cac'
+import { goke } from 'goke'
 import { generateMap, toYaml } from './index.js'
 import { createConsoleLogger } from './logger.js'
 
-const cli = cac('agentmap')
+const cli = goke('agentmap')
 const logger = createConsoleLogger()
+
+interface CliOptions {
+  output?: string
+  ignore?: string | string[] | null
+  filter?: string | string[] | null
+  noSubmodules?: boolean
+}
+
+function normalizePatterns(value: string | string[] | null | undefined): string[] | undefined {
+  if (value == null) {
+    return undefined
+  }
+
+  const values = Array.isArray(value) ? value : [value]
+  const normalized = values.map(v => v.trim()).filter(Boolean)
+  return normalized.length > 0 ? normalized : undefined
+}
 
 const NO_FILES_MESSAGE = `No files found with header comments.
 
@@ -25,19 +42,19 @@ The description will appear in the 'desc' field of the output.
 cli
   .command('[dir]', 'Generate a YAML map of the codebase')
   .option('-o, --output <file>', 'Write output to file (default: stdout)')
-  .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)', { type: [] })
-  .option('-f, --filter <pattern>', 'Filter pattern - only include matching files (can be repeated)', { type: [] })
+  .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)')
+  .option('-f, --filter <pattern>', 'Filter pattern - only include matching files (can be repeated)')
   .option('--no-submodules', 'Exclude submodule info from the map')
-  .action(async (dir: string | undefined, options: { output?: string; ignore?: string[]; filter?: string[]; submodules?: boolean }) => {
+  .action(async (dir: string | undefined, options: CliOptions) => {
     const targetDir = resolve(dir ?? '.')
 
     try {
       const map = await generateMap({
         dir: targetDir,
-        ignore: options.ignore,
-        filter: options.filter,
+        ignore: normalizePatterns(options.ignore),
+        filter: normalizePatterns(options.filter),
         diff: true,
-        submodules: options.submodules,
+        submodules: options.noSubmodules ? false : undefined,
         logger,
       })
 
@@ -133,5 +150,10 @@ cli
 
 cli.help()
 cli.version('0.8.0')
+
+if (process.argv.slice(2).some(arg => arg === '-v' || arg === '--version')) {
+  cli.outputVersion()
+  process.exit(0)
+}
 
 cli.parse()

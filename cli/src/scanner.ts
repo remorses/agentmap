@@ -80,7 +80,7 @@ export interface ScanResult {
 export async function scanDirectory(options: GenerateOptions = {}): Promise<ScanResult> {
   const dir = options.dir ?? process.cwd()
   const logger = options.logger ?? createConsoleLogger()
-  // Filter out null/undefined/empty patterns (cac can pass [null] when option not used)
+  // Filter out null/undefined/empty patterns (some CLI parsers can pass [null] when option is not used)
   const ignorePatterns = (options.ignore ?? []).filter((p): p is string => !!p)
   const filterPatterns = (options.filter ?? []).filter((p): p is string => !!p)
   const includeDiff = options.diff ?? false
