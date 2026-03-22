@@ -1,6 +1,6 @@
 // Truncate definitions in map to limit context size.
 
-import type { DefEntry, FileEntry, MapNode, SubmoduleEntry } from '../types.js'
+import type { DefEntry, FileEntry, MapNode, SubmoduleEntry, SubmoduleNode } from '../types.js'
 
 const DEFAULT_MAX_DEFS = 25
 
@@ -26,6 +26,33 @@ function isFileEntry(value: unknown): value is FileEntry {
 function isSubmoduleEntry(value: unknown): value is SubmoduleEntry {
   if (!value || typeof value !== 'object') return false
   return 'submodule' in (value as Record<string, unknown>)
+}
+
+/**
+ * Recursively truncate a submodule node while preserving its metadata keys.
+ */
+function truncateSubmoduleNode(entry: SubmoduleNode, maxDefs: number): SubmoduleNode {
+  const result: SubmoduleNode = { submodule: entry.submodule }
+
+  if (entry.dirty) {
+    result.dirty = entry.dirty
+  }
+
+  for (const [key, value] of Object.entries(entry)) {
+    if (key === 'submodule' || key === 'dirty') {
+      continue
+    }
+
+    if (isFileEntry(value)) {
+      result[key] = truncateDefs(value, maxDefs)
+    } else if (isSubmoduleEntry(value)) {
+      result[key] = truncateSubmoduleNode(value as SubmoduleNode, maxDefs)
+    } else if (value && typeof value === 'object') {
+      result[key] = truncateMap(value as MapNode, maxDefs)
+    }
+  }
+
+  return result
 }
 
 /**
@@ -87,12 +114,9 @@ export function truncateMap(node: MapNode, maxDefs: number = DEFAULT_MAX_DEFS): 
     if (isFileEntry(value)) {
       result[key] = truncateDefs(value, maxDefs)
     } else if (isSubmoduleEntry(value)) {
-      // Submodule entries pass through unchanged (no defs to truncate)
-      result[key] = value
+      result[key] = truncateSubmoduleNode(value as SubmoduleNode, maxDefs)
     } else if (value && typeof value === 'object') {
       result[key] = truncateMap(value as MapNode, maxDefs)
-    } else {
-      result[key] = value
     }
   }
 

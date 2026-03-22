@@ -30,6 +30,7 @@ export type {
   MarkerResult,
   SubmoduleEntry,
   SubmoduleInfo,
+  SubmoduleNode,
 } from './types.js'
 
 /**

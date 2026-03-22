@@ -1,6 +1,7 @@
-// Scan directory for files with header comments/docstrings.
+// Scan directory for files with header comments/docstrings and recurse into submodules.
 
 import { execSync } from 'child_process'
+import { realpathSync } from 'fs'
 import pLimit from 'p-limit'
 import picomatch from 'picomatch'
 import { readFile } from 'fs/promises'
@@ -12,6 +13,7 @@ import { getSubmodules, getSubmodulePaths } from './extract/submodules.js'
 import { createConsoleLogger } from './logger.js'
 import { parseCode, detectLanguage, LANGUAGE_EXTENSIONS } from './parser/index.js'
 import type { FileResult, GenerateOptions, FileDiff, FileDiffStats, SubmoduleInfo } from './types.js'
+import type { Logger } from './logger.js'
 
 /**
  * Maximum number of files to process (safety limit)
@@ -74,104 +76,160 @@ export interface ScanResult {
   submodules: SubmoduleInfo[]
 }
 
+interface ScanRepoOptions {
+  repoDir: string
+  pathPrefix: string
+  includeDiff: boolean
+  includeSubmodules: boolean
+  logger: Logger
+  isIncluded?: (path: string) => boolean
+  isIgnored?: (path: string) => boolean
+  visitedRepoDirs: Set<string>
+}
+
+function normalizeRelativePath(path: string): string {
+  return path.replace(/\\/g, '/')
+}
+
+function joinRelativePath(prefix: string, path: string): string {
+  const normalizedPath = normalizeRelativePath(path)
+  return prefix ? `${prefix}/${normalizedPath}` : normalizedPath
+}
+
+function getCanonicalRepoDir(dir: string): string {
+  try {
+    return realpathSync(dir)
+  } catch {
+    return dir
+  }
+}
+
+async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
+  const canonicalRepoDir = getCanonicalRepoDir(options.repoDir)
+  if (options.visitedRepoDirs.has(canonicalRepoDir)) {
+    return { files: [], submodules: [] }
+  }
+  options.visitedRepoDirs.add(canonicalRepoDir)
+
+  let submodules: SubmoduleInfo[] = []
+  const directSubmodules = options.includeSubmodules ? getSubmodules(options.repoDir) : []
+  const directSubmodulePathSet = options.includeSubmodules
+    ? new Set(directSubmodules.map(submodule => submodule.path))
+    : getSubmodulePaths(options.repoDir)
+
+  if (options.includeSubmodules) {
+    submodules = directSubmodules.map(submodule => ({
+      ...submodule,
+      path: joinRelativePath(options.pathPrefix, submodule.path),
+    }))
+  }
+
+  const normalizedSubmodulePaths = new Set<string>()
+  for (const path of directSubmodulePathSet) {
+    normalizedSubmodulePaths.add(normalize(path))
+  }
+
+  let files = getGitFiles(options.repoDir)
+  files = files.filter(file => !normalizedSubmodulePaths.has(file))
+  files = files.filter(file => isSupportedFile(file) || isReadmeFile(file))
+
+  files = files.filter(file => {
+    const relativePath = joinRelativePath(options.pathPrefix, file)
+
+    if (options.isIncluded && !options.isIncluded(relativePath)) {
+      return false
+    }
+
+    if (options.isIgnored && options.isIgnored(relativePath)) {
+      return false
+    }
+
+    return true
+  })
+
+  if (files.length > MAX_FILES) {
+    options.logger?.warn(`Warning: Too many files (${files.length} > ${MAX_FILES}), skipping scan`)
+    return { files: [], submodules }
+  }
+
+  let fileStats: Map<string, FileDiffStats> | null = null
+  let fileDiffs: Map<string, FileDiff> | null = null
+
+  if (options.includeDiff) {
+    try {
+      const diffData = getAllDiffData(options.repoDir, directSubmodulePathSet, options.logger)
+      fileStats = diffData.fileStats
+      fileDiffs = diffData.fileDiffs
+    } catch {
+      fileStats = null
+      fileDiffs = null
+    }
+  }
+
+  const limit = pLimit(20)
+  const resultPromises = files.map(relativePath => {
+    const fullPath = join(options.repoDir, relativePath)
+    const normalizedPath = normalizeRelativePath(relativePath)
+    const prefixedRelativePath = joinRelativePath(options.pathPrefix, relativePath)
+    const fileDiff = fileDiffs?.get(normalizedPath)
+    const stats = fileStats?.get(normalizedPath)
+
+    return limit(async () => {
+      try {
+        return await processFile(fullPath, prefixedRelativePath, fileDiff, stats)
+      } catch {
+        return null
+      }
+    })
+  })
+
+  const nestedResults = options.includeSubmodules
+    ? await Promise.all(directSubmodules.map(async submodule => {
+      if (!submodule.initialized) {
+        return { files: [], submodules: [] }
+      }
+
+      return scanRepo({
+        ...options,
+        repoDir: join(options.repoDir, submodule.path),
+        pathPrefix: joinRelativePath(options.pathPrefix, submodule.path),
+      })
+    }))
+    : []
+
+  const results = await Promise.all(resultPromises)
+
+  for (const nested of nestedResults) {
+    submodules.push(...nested.submodules)
+  }
+
+  return {
+    files: [
+      ...results.filter((result): result is FileResult => result !== null),
+      ...nestedResults.flatMap(result => result.files),
+    ],
+    submodules,
+  }
+}
+
 /**
  * Scan directory and process files with header comments
  */
 export async function scanDirectory(options: GenerateOptions = {}): Promise<ScanResult> {
   const dir = options.dir ?? process.cwd()
   const logger = options.logger ?? createConsoleLogger()
-  // Filter out null/undefined/empty patterns (some CLI parsers can pass [null] when option is not used)
   const ignorePatterns = (options.ignore ?? []).filter((p): p is string => !!p)
   const filterPatterns = (options.filter ?? []).filter((p): p is string => !!p)
-  const includeDiff = options.diff ?? false
-  const includeSubmodules = options.submodules !== false // default true
-
-  // Detect submodules first (needed for both map entries and diff filtering)
-  let submodules: SubmoduleInfo[] = []
-  let submodulePathSet: Set<string> = new Set()
-  if (includeSubmodules) {
-    submodules = getSubmodules(dir)
-    submodulePathSet = new Set(submodules.map(s => s.path))
-  } else {
-    // Even when not showing submodules, detect paths for diff filtering
-    submodulePathSet = getSubmodulePaths(dir)
-  }
-
-  // Build a normalized set for filtering (handles Windows backslash paths)
-  const normalizedSubmodulePaths = new Set<string>()
-  for (const p of submodulePathSet) {
-    normalizedSubmodulePaths.add(normalize(p))
-  }
-
-  // Get file list from git (caller should ensure we're in a git repo)
-  let files = getGitFiles(dir)
-
-  // Filter out submodule gitlink entries (they appear as paths in ls-files)
-  // Use normalized paths to handle Windows backslash vs forward slash differences
-  files = files.filter(f => !normalizedSubmodulePaths.has(f))
-
-  // Filter by supported extensions or README files
-  files = files.filter(f => isSupportedFile(f) || isReadmeFile(f))
-
-  // Filter by filter patterns (only include matching files)
-  if (filterPatterns.length > 0) {
-    const isIncluded = picomatch(filterPatterns)
-    files = files.filter(f => isIncluded(f))
-  }
-
-  // Filter by ignore patterns
-  if (ignorePatterns.length > 0) {
-    const isIgnored = picomatch(ignorePatterns)
-    files = files.filter(f => !isIgnored(f))
-  }
-
-  // Safety check: bail if too many files to avoid scanning huge directories
-  if (files.length > MAX_FILES) {
-    logger.warn(`Warning: Too many files (${files.length} > ${MAX_FILES}), skipping scan`)
-    return { files: [], submodules }
-  }
-
-  // Get git diff data if needed (isolated from main processing)
-  let fileStats: Map<string, FileDiffStats> | null = null
-  let fileDiffs: Map<string, FileDiff> | null = null
-
-  if (includeDiff) {
-    try {
-      const diffData = getAllDiffData(dir, submodulePathSet, logger)
-      fileStats = diffData.fileStats
-      fileDiffs = diffData.fileDiffs
-    } catch {
-      // Diff failed - continue without diff info
-      fileStats = null
-      fileDiffs = null
-    }
-  }
-
-  // Process files in parallel with concurrency limit
-  const limit = pLimit(20)
-
-  const resultPromises = files.map(relativePath => {
-    const fullPath = join(dir, relativePath)
-    // Normalize path for lookup (handle Windows backslashes)
-    const normalizedPath = relativePath.replace(/\\/g, '/')
-    const fileDiff = fileDiffs?.get(normalizedPath)
-    const stats = fileStats?.get(normalizedPath)
-
-    return limit(async () => {
-      try {
-        return await processFile(fullPath, relativePath, fileDiff, stats)
-      } catch {
-        // Skip files that fail to process
-        return null
-      }
-    })
+  return scanRepo({
+    repoDir: dir,
+    pathPrefix: '',
+    includeDiff: options.diff ?? false,
+    includeSubmodules: options.submodules !== false,
+    logger,
+    isIncluded: filterPatterns.length > 0 ? picomatch(filterPatterns) : undefined,
+    isIgnored: ignorePatterns.length > 0 ? picomatch(ignorePatterns) : undefined,
+    visitedRepoDirs: new Set(),
   })
-
-  const results = await Promise.all(resultPromises)
-  return {
-    files: results.filter((r): r is FileResult => r !== null),
-    submodules,
-  }
 }
 
 /**

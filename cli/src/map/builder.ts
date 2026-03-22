@@ -1,7 +1,7 @@
 // Build the nested map object from file results.
 
 import { basename } from 'path'
-import type { Definition, FileEntry, FileResult, FileDiffStats, MapNode, SubmoduleEntry, SubmoduleInfo } from '../types.js'
+import type { Definition, FileEntry, FileResult, FileDiffStats, MapNode, SubmoduleInfo, SubmoduleNode } from '../types.js'
 
 /**
  * Build a nested map object from file results and submodule info
@@ -9,15 +9,15 @@ import type { Definition, FileEntry, FileResult, FileDiffStats, MapNode, Submodu
 export function buildMap(results: FileResult[], rootName: string, submodules?: SubmoduleInfo[]): MapNode {
   const root: MapNode = {}
 
-  for (const result of results) {
-    insertFile(root, result)
-  }
-
   // Insert submodule entries
   if (submodules) {
     for (const sub of submodules) {
       insertSubmodule(root, sub)
     }
+  }
+
+  for (const result of results) {
+    insertFile(root, result)
   }
 
   // Wrap in root name
@@ -141,12 +141,19 @@ function insertSubmodule(root: MapNode, sub: SubmoduleInfo): void {
     label = `detached @ ${sub.commit}`
   }
 
-  const entry: SubmoduleEntry = { submodule: label }
+  const name = parts[parts.length - 1]
+  const existing = current[name]
+  const entry: SubmoduleNode = existing && typeof existing === 'object'
+    ? existing as SubmoduleNode
+    : { submodule: label }
+
+  entry.submodule = label
   if (sub.dirty) {
     entry.dirty = 'modified'
+  } else {
+    delete entry.dirty
   }
 
-  const name = parts[parts.length - 1]
   current[name] = entry
 }
 
