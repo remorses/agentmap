@@ -156,6 +156,8 @@ export interface GenerateOptions {
   diffBase?: string
   /** Max definitions per file before truncation (default: 25) */
   maxDefs?: number
+  /** Max characters for file descriptions before truncation (default: 300). Rounds up to full line. */
+  maxDescChars?: number
   /** Include submodule info in the map (default: true) */
   submodules?: boolean
   /** Logger implementation (default: console logger) */

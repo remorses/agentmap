@@ -154,33 +154,13 @@ describe('TypeScript', () => {
   age: number
 }`
     const defs = await getDefinitions(code, 'typescript')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 4,
-    "exported": false,
-    "line": 1,
-    "name": "User",
-    "type": "interface",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('type alias is included (any size)', async () => {
     const code = `type Status = 'pending' | 'active' | 'done'`
     const defs = await getDefinitions(code, 'typescript')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 1,
-    "exported": false,
-    "line": 1,
-    "name": "Status",
-    "type": "type",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('enum is included (any size)', async () => {
@@ -190,17 +170,7 @@ describe('TypeScript', () => {
   Blue,
 }`
     const defs = await getDefinitions(code, 'typescript')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 5,
-    "exported": false,
-    "line": 1,
-    "name": "Color",
-    "type": "enum",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('exported function', async () => {
@@ -488,25 +458,11 @@ type ID = string | number`
     "type": "function",
   },
   {
-    "endLine": 19,
-    "exported": false,
-    "line": 17,
-    "name": "Config",
-    "type": "interface",
-  },
-  {
     "endLine": 27,
     "exported": true,
     "line": 27,
     "name": "VERSION",
     "type": "const",
-  },
-  {
-    "endLine": 30,
-    "exported": false,
-    "line": 30,
-    "name": "ID",
-    "type": "type",
   },
 ]
 `)
@@ -801,17 +757,7 @@ describe('Rust', () => {
     max_connections: usize,
 }`
     const defs = await getDefinitions(code, 'rust')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 10,
-    "exported": false,
-    "line": 1,
-    "name": "Config",
-    "type": "struct",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('small struct', async () => {
@@ -854,17 +800,7 @@ describe('Rust', () => {
     fn run(&self) -> Result<(), Error>;
 }`
     const defs = await getDefinitions(code, 'rust')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 10,
-    "exported": false,
-    "line": 1,
-    "name": "Processor",
-    "type": "trait",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('enum', async () => {
@@ -874,65 +810,25 @@ describe('Rust', () => {
     Done,
 }`
     const defs = await getDefinitions(code, 'rust')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 5,
-    "exported": false,
-    "line": 1,
-    "name": "Status",
-    "type": "enum",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('type alias', async () => {
     const code = `type Result<T> = std::result::Result<T, Error>;`
     const defs = await getDefinitions(code, 'rust')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 1,
-    "exported": false,
-    "line": 1,
-    "name": "Result",
-    "type": "type",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('const item', async () => {
     const code = `const MAX_SIZE: usize = 1024;`
     const defs = await getDefinitions(code, 'rust')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 1,
-    "exported": false,
-    "line": 1,
-    "name": "MAX_SIZE",
-    "type": "const",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('static item', async () => {
     const code = `static COUNTER: AtomicUsize = AtomicUsize::new(0);`
     const defs = await getDefinitions(code, 'rust')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 1,
-    "exported": false,
-    "line": 1,
-    "name": "COUNTER",
-    "type": "const",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('pub function', async () => {
@@ -1340,17 +1236,7 @@ export * from './other'`
   delete(id: ID): Promise<void>
 }`
     const defs = await getDefinitions(code, 'typescript')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 6,
-    "exported": false,
-    "line": 1,
-    "name": "Repository",
-    "type": "interface",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('mapped type', async () => {
@@ -1358,33 +1244,13 @@ export * from './other'`
   readonly [P in keyof T]: T[P]
 }`
     const defs = await getDefinitions(code, 'typescript')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 3,
-    "exported": false,
-    "line": 1,
-    "name": "Readonly",
-    "type": "type",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('conditional type', async () => {
     const code = `type NonNullable<T> = T extends null | undefined ? never : T`
     const defs = await getDefinitions(code, 'typescript')
-    expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 1,
-    "exported": false,
-    "line": 1,
-    "name": "NonNullable",
-    "type": "type",
-  },
-]
-`)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('overloaded function signatures', async () => {
@@ -1593,16 +1459,16 @@ describe('Zig', () => {
 };`
     const defs = await getDefinitions(code, 'zig')
     expect(defs).toMatchInlineSnapshot(`
-[
-  {
-    "endLine": 6,
-    "exported": true,
-    "line": 1,
-    "name": "Status",
-    "type": "enum",
-  },
-]
-`)
+      [
+        {
+          "endLine": 6,
+          "exported": true,
+          "line": 1,
+          "name": "Status",
+          "type": "enum",
+        },
+      ]
+    `)
   })
 
   test('union declaration is class', async () => {
@@ -1877,17 +1743,7 @@ private:
     int v;
 };`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 7,
-          "exported": false,
-          "line": 1,
-          "name": "Point",
-          "type": "struct",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('enum definition', async () => {
@@ -1898,17 +1754,7 @@ private:
     ALPHA
 };`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 6,
-          "exported": false,
-          "line": 1,
-          "name": "Color",
-          "type": "enum",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('enum class (C++11)', async () => {
@@ -1919,49 +1765,19 @@ private:
     Failed
 };`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 6,
-          "exported": false,
-          "line": 1,
-          "name": "Status",
-          "type": "enum",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('typedef', async () => {
     const code = `typedef unsigned long ulong;`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 1,
-          "exported": false,
-          "line": 1,
-          "name": "ulong",
-          "type": "type",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('using alias (C++11)', async () => {
     const code = `using StringList = std::vector<std::string>;`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 1,
-          "exported": false,
-          "line": 1,
-          "name": "StringList",
-          "type": "type",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('template function', async () => {
@@ -2027,17 +1843,7 @@ public:
   test('const global', async () => {
     const code = `const int MAX_SIZE = 1024;`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 1,
-          "exported": false,
-          "line": 1,
-          "name": "MAX_SIZE",
-          "type": "const",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('multiple definitions', async () => {
@@ -2059,20 +1865,6 @@ int distance(Point a, Point b) {
     const defs = await getDefinitions(code, 'cpp')
     expect(defs).toMatchInlineSnapshot(`
       [
-        {
-          "endLine": 6,
-          "exported": false,
-          "line": 1,
-          "name": "Point",
-          "type": "struct",
-        },
-        {
-          "endLine": 8,
-          "exported": false,
-          "line": 8,
-          "name": "Color",
-          "type": "enum",
-        },
         {
           "endLine": 15,
           "exported": false,
@@ -2161,17 +1953,7 @@ void process(Point* p);
     return x * 2;
 };`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 3,
-          "exported": false,
-          "line": 1,
-          "name": "lambda",
-          "type": "const",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('constructor and destructor', async () => {
@@ -2232,18 +2014,7 @@ private:
   test('extern variable has extern flag', async () => {
     const code = `extern int global_counter;`
     const defs = await getDefinitions(code, 'cpp')
-    expect(defs).toMatchInlineSnapshot(`
-      [
-        {
-          "endLine": 1,
-          "exported": false,
-          "extern": true,
-          "line": 1,
-          "name": "global_counter",
-          "type": "const",
-        },
-      ]
-    `)
+    expect(defs).toMatchInlineSnapshot(`[]`)
   })
 
   test('non-extern function has no extern flag', async () => {

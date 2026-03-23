@@ -178,46 +178,46 @@ function extractDefinition(opts: ExtractInternalOptions): Definition[] {
     return results
   }
 
-  // Structs
+  // Structs - only if exported
   if (structTypes.includes(actualNode.type)) {
     const name = extractName(actualNode, language)
-    if (name && getBodyLineCount(actualNode) > MIN_BODY_LINES) {
+    if (name && getBodyLineCount(actualNode) > MIN_BODY_LINES && resolveExported(name)) {
       results.push(createDef(name, 'struct', actualNode.startPosition.row + 1, actualNode.endPosition.row + 1))
     }
     return results
   }
 
-  // Traits
+  // Traits - only if exported
   if (traitTypes.includes(actualNode.type)) {
     const name = extractName(actualNode, language)
-    if (name && getBodyLineCount(actualNode) > MIN_BODY_LINES) {
+    if (name && getBodyLineCount(actualNode) > MIN_BODY_LINES && resolveExported(name)) {
       results.push(createDef(name, 'trait', actualNode.startPosition.row + 1, actualNode.endPosition.row + 1))
     }
     return results
   }
 
-  // Interfaces
+  // Interfaces - only if exported
   if (interfaceTypes.includes(actualNode.type)) {
     const name = extractName(actualNode, language)
-    if (name) {
+    if (name && resolveExported(name)) {
       results.push(createDef(name, 'interface', actualNode.startPosition.row + 1, actualNode.endPosition.row + 1))
     }
     return results
   }
 
-  // Type aliases
+  // Type aliases - only if exported
   if (typeTypes.includes(actualNode.type)) {
     const name = extractName(actualNode, language)
-    if (name) {
+    if (name && resolveExported(name)) {
       results.push(createDef(name, 'type', actualNode.startPosition.row + 1, actualNode.endPosition.row + 1))
     }
     return results
   }
 
-  // Enums
+  // Enums - only if exported
   if (enumTypes.includes(actualNode.type)) {
     const name = extractName(actualNode, language)
-    if (name) {
+    if (name && resolveExported(name)) {
       results.push(createDef(name, 'enum', actualNode.startPosition.row + 1, actualNode.endPosition.row + 1))
     }
     return results
@@ -261,9 +261,9 @@ function extractDefinition(opts: ExtractInternalOptions): Definition[] {
       return extractJSDeclarations({ node: actualNode, language, exported, isExtern: nodeIsExtern })
     }
 
-    // Other languages: simple const extraction
+    // Other languages: simple const extraction - only if exported
     const name = extractConstName(actualNode, language)
-    if (name) {
+    if (name && resolveExported(name)) {
       results.push(createDef(name, 'const', actualNode.startPosition.row + 1, actualNode.endPosition.row + 1))
     }
     return results

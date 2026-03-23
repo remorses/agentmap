@@ -10,20 +10,21 @@ import { createConsoleLogger } from './logger.js'
 const cli = goke('agentmap')
 const logger = createConsoleLogger()
 
-interface CliOptions {
-  output?: string
-  ignore?: string | string[] | null
-  filter?: string | string[] | null
-  noSubmodules?: boolean
-}
+function normalizePatterns(value: unknown): string[] | undefined {
+  if (typeof value === 'string') {
+    const normalized = value.trim()
+    return normalized ? [normalized] : undefined
+  }
 
-function normalizePatterns(value: string | string[] | null | undefined): string[] | undefined {
-  if (value == null) {
+  if (!Array.isArray(value)) {
     return undefined
   }
 
-  const values = Array.isArray(value) ? value : [value]
-  const normalized = values.map(v => v.trim()).filter(Boolean)
+  const normalized = value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map(entry => entry.trim())
+    .filter(Boolean)
+
   return normalized.length > 0 ? normalized : undefined
 }
 
@@ -45,7 +46,8 @@ cli
   .option('-i, --ignore <pattern>', 'Ignore pattern (can be repeated)')
   .option('-f, --filter <pattern>', 'Filter pattern - only include matching files (can be repeated)')
   .option('--no-submodules', 'Exclude submodule info from the map')
-  .action(async (dir: string | undefined, options: CliOptions) => {
+  .option('--max-desc-chars <chars>', 'Max characters for descriptions (default: 300, rounds up to full line)')
+  .action(async (dir, options) => {
     const targetDir = resolve(dir ?? '.')
 
     try {
@@ -55,6 +57,9 @@ cli
         filter: normalizePatterns(options.filter),
         diff: true,
         submodules: options.noSubmodules ? false : undefined,
+        maxDescChars: options.maxDescChars != null && Number.isFinite(Number(options.maxDescChars)) && Number(options.maxDescChars) > 0
+          ? Number(options.maxDescChars)
+          : undefined,
         logger,
       })
 

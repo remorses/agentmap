@@ -4,7 +4,7 @@ import { Lexer, type Token, type Tokens } from 'marked'
 import { readFirstLines } from './utils.js'
 
 const MAX_LINES = 50
-const MAX_DESC_LINES = 25
+const MAX_DESC_LINES = 20
 
 /**
  * Truncate lines to MAX_DESC_LINES, adding indicator if truncated

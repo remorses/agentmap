@@ -547,13 +547,13 @@ describe('Edge cases', () => {
     expect(desc).toBeUndefined()
   })
 
-  test('description limited to 25 lines with truncation indicator', async () => {
+  test('description limited to 20 lines with truncation indicator', async () => {
     const lines = Array.from({ length: 30 }, (_, i) => `// Line ${i + 1}`).join('\n')
     const desc = await testFile('test.ts', lines + '\n\nexport function foo() {}')
     const descLines = desc?.split('\n') ?? []
-    // 25 content lines + 1 truncation indicator
-    expect(descLines.length).toBe(26)
-    expect(descLines[25]).toBe('... and 5 more lines')
+    // 20 content lines + 1 truncation indicator
+    expect(descLines.length).toBe(21)
+    expect(descLines[20]).toBe('... and 10 more lines')
   })
 
   test('empty comment returns undefined (no meaningful description)', async () => {

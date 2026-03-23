@@ -39,22 +39,24 @@ function formatFileDiff(diff: FileDiffStats): string {
 }
 
 /**
- * Format a definition as a string like "function, exported, extern, updated (+5-2)"
+ * Format a definition as a string like "exported fn updated (+5-2)"
+ * No commas, exported/extern before the type, "fn" instead of "function".
  */
 function formatDefinition(def: Definition): string {
-  const parts: string[] = [def.type]
-  
+  const parts: string[] = []
+
   if (def.exported) {
     parts.push('exported')
   }
-  
+
   if (def.extern) {
     parts.push('extern')
   }
-  
+
+  parts.push(def.type === 'function' ? 'fn' : def.type)
+
   // Add diff info if present
   if (def.diff) {
-    // Format as +N-M or just +N or -M
     const diffParts: string[] = []
     if (def.diff.added > 0) {
       diffParts.push(`+${def.diff.added}`)
@@ -62,16 +64,15 @@ function formatDefinition(def: Definition): string {
     if (def.diff.deleted > 0) {
       diffParts.push(`-${def.diff.deleted}`)
     }
-    
-    // Combine status with counts: "updated (+5-2)" or just "added"
+
     if (diffParts.length > 0) {
       parts.push(`${def.diff.status} (${diffParts.join('')})`)
     } else {
       parts.push(def.diff.status)
     }
   }
-  
-  return parts.join(', ')
+
+  return parts.join(' ')
 }
 
 /**

@@ -110,9 +110,9 @@ with multiple lines"
     const lines = Array.from({ length: 40 }, (_, i) => `- Item ${i + 1}`).join('\n')
     const desc = await testMarkdown(`# Title\n\n${lines}`)
     const descLines = desc?.split('\n') ?? []
-    // 25 content lines + 1 truncation indicator
-    expect(descLines.length).toBe(26)
-    expect(descLines[25]).toBe('... and 16 more lines')
+    // 20 content lines + 1 truncation indicator (Title + 19 items, then indicator)
+    expect(descLines.length).toBe(21)
+    expect(descLines[20]).toBe('... and 21 more lines')
   })
 
   test('returns null for empty markdown', async () => {
