@@ -43,27 +43,89 @@ function isReadmeFile(filepath: string): boolean {
 }
 
 /**
- * Get tracked files using git ls-files
- * Only returns files that are tracked by git (committed or staged)
+ * A tracked file with its blob SHA (for dedup) and normalized path.
  */
-function getGitFiles(dir: string): string[] {
+interface GitFileEntry {
+  path: string
+  sha: string
+}
+
+/**
+ * Get tracked files using git ls-files -z -s.
+ * NUL-delimited for safe cross-platform parsing of any filename.
+ * Filters out symlinks (mode 120000).
+ * Returns path + blob SHA for duplicate detection.
+ *
+ * Format per entry: "<mode> <sha> <stage>\t<path>\0"
+ */
+function getGitFiles(dir: string): GitFileEntry[] {
   const maxBuffer = 1024 * 10000000
   try {
-    // Get only tracked files
-    const stdout = execSync('git ls-files', {
+    const stdout = execSync('git ls-files -z -s', {
       cwd: dir,
       maxBuffer,
       encoding: 'utf8',
     })
 
-    return stdout
-      .split(/\r?\n/)
-      .map(x => x.trim())
-      .filter(Boolean)
-      .map(normalize)
+    const results: GitFileEntry[] = []
+
+    // Split on NUL byte, filter empty trailing entry
+    const entries = stdout.split('\0').filter(Boolean)
+    for (const entry of entries) {
+      // Format: "<mode> <sha> <stage>\t<path>"
+      const tabIdx = entry.indexOf('\t')
+      if (tabIdx === -1) continue
+
+      const meta = entry.slice(0, tabIdx)
+      const path = entry.slice(tabIdx + 1)
+
+      const spaceIdx = meta.indexOf(' ')
+      if (spaceIdx === -1) continue
+
+      const mode = meta.slice(0, spaceIdx)
+      const sha = meta.slice(spaceIdx + 1, meta.indexOf(' ', spaceIdx + 1))
+
+      // Skip symlinks (mode 120000)
+      if (mode === '120000') continue
+
+      results.push({ path: normalize(path), sha })
+    }
+
+    return results
   } catch {
     return []
   }
+}
+
+/**
+ * Build a map of blob SHA → shortest path for duplicate detection.
+ * Files sharing the same blob SHA are exact duplicates in git.
+ */
+function buildDuplicateMap(files: GitFileEntry[], pathPrefix: string): Map<string, string> {
+  // Group paths by SHA
+  const shaToEntries = new Map<string, string[]>()
+  for (const { path, sha } of files) {
+    const prefixed = joinRelativePath(pathPrefix, path)
+    const existing = shaToEntries.get(sha)
+    if (existing) {
+      existing.push(prefixed)
+    } else {
+      shaToEntries.set(sha, [prefixed])
+    }
+  }
+
+  // For each group with >1 file, shortest path is the original
+  const duplicateOf = new Map<string, string>()
+  for (const paths of shaToEntries.values()) {
+    if (paths.length < 2) continue
+    paths.sort((a, b) => a.length - b.length || a.localeCompare(b))
+    const original = paths[0]
+    for (let i = 1; i < paths.length; i++) {
+      duplicateOf.set(paths[i], original)
+    }
+  }
+
+  return duplicateOf
 }
 
 
@@ -129,12 +191,16 @@ async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
     normalizedSubmodulePaths.add(normalize(path))
   }
 
-  let files = getGitFiles(options.repoDir)
-  files = files.filter(file => !normalizedSubmodulePaths.has(file))
-  files = files.filter(file => isSupportedFile(file) || isReadmeFile(file))
+  const allGitFiles = getGitFiles(options.repoDir)
 
-  files = files.filter(file => {
-    const relativePath = joinRelativePath(options.pathPrefix, file)
+  // Build duplicate map before filtering (needs all files to detect dupes)
+  const duplicateOf = buildDuplicateMap(allGitFiles, options.pathPrefix)
+
+  let gitFiles = allGitFiles.filter(f => !normalizedSubmodulePaths.has(f.path))
+  gitFiles = gitFiles.filter(f => isSupportedFile(f.path) || isReadmeFile(f.path))
+
+  gitFiles = gitFiles.filter(f => {
+    const relativePath = joinRelativePath(options.pathPrefix, f.path)
 
     if (options.isIncluded && !options.isIncluded(relativePath)) {
       return false
@@ -147,8 +213,8 @@ async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
     return true
   })
 
-  if (files.length > MAX_FILES) {
-    options.logger?.warn(`Warning: Too many files (${files.length} > ${MAX_FILES}), skipping scan`)
+  if (gitFiles.length > MAX_FILES) {
+    options.logger?.warn(`Warning: Too many files (${gitFiles.length} > ${MAX_FILES}), skipping scan`)
     return { files: [], submodules }
   }
 
@@ -167,15 +233,24 @@ async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
   }
 
   const limit = pLimit(20)
-  const resultPromises = files.map(relativePath => {
+  const resultPromises = gitFiles.map(({ path: relativePath }) => {
     const fullPath = join(options.repoDir, relativePath)
     const normalizedPath = normalizeRelativePath(relativePath)
     const prefixedRelativePath = joinRelativePath(options.pathPrefix, relativePath)
     const fileDiff = fileDiffs?.get(normalizedPath)
     const stats = fileStats?.get(normalizedPath)
+    const dupOriginal = duplicateOf.get(prefixedRelativePath)
 
     return limit(async () => {
       try {
+        // If this file is a duplicate, return a stub pointing to the original
+        if (dupOriginal) {
+          return {
+            relativePath: prefixedRelativePath,
+            duplicateOf: dupOriginal,
+            definitions: [],
+          } satisfies FileResult
+        }
         return await processFile(fullPath, prefixedRelativePath, fileDiff, stats)
       } catch {
         return null

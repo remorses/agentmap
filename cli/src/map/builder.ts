@@ -91,8 +91,15 @@ function insertFile(root: MapNode, result: FileResult): void {
     current = current[dir] as MapNode
   }
 
-  // Create file entry - description first, then diff, then defs
+  // Create file entry
   const filename = parts[parts.length - 1]
+
+  // Duplicate files: just point to the original, no defs
+  if (result.duplicateOf) {
+    current[filename] = { description: `duplicate of ${result.duplicateOf}` }
+    return
+  }
+
   const entry: FileEntry = {}
 
   if (result.description) {

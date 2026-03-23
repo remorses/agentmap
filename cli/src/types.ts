@@ -138,6 +138,8 @@ export interface FileResult {
   description?: string
   definitions: Definition[]
   diff?: FileDiffStats  // only present when --diff flag used
+  /** If set, this file is an exact duplicate of another file (by git blob SHA) */
+  duplicateOf?: string
 }
 
 /**
