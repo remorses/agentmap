@@ -21,11 +21,11 @@
       "default": "./dist/index.js"
     },
     "./src": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
     "./src/*": {
-      "types": "./dist/*.d.ts",
+      "types": "./src/*.ts",
       "default": "./src/*.ts"
     }
   },
@@ -36,7 +36,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist *.tsbuildinfo && tsc",
     "prepublishOnly": "bun run build"
   },
   "dependencies": {

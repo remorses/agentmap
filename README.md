@@ -14,26 +14,29 @@ my-project:
   src:
     cli.ts:
       description: CLI entrypoint for generating codebase maps.
+      defs:
+        main: exported fn
+        parseArgs: fn
     lib:
       parser.ts:
         description: Tree-sitter parser initialization and code parsing.
         defs:
-          parseCode: line 32, function, exported
-          resetParser: line 45, function, exported
+          parseCode: exported fn
+          resetParser: exported fn
       types.ts:
         description: Core type definitions for the codebase map.
-        defs:
-          FileResult: line 101, interface, exported
-          GenerateOptions: line 111, interface, exported
 ```
 
 > [!NOTE]
 > Descriptions are extracted from header comments or docstrings at the top of each file. Files without a header comment are not included in the map. See [File Detection](#file-detection) below for examples.
 
 The map contains:
-- **File tree structure** - nested directories and files
-- **Descriptions** - extracted from header comments/docstrings in each file
-- **Definitions** - top-level functions, classes, interfaces, types with line numbers and export status
+- **File tree structure** — nested directories and files
+- **Descriptions** — extracted from header comments/docstrings in each file
+- **Definitions** — top-level functions and classes with export status (compact format: `exported fn`, `fn`, `exported class`)
+- **Git diff stats** — `+N-M` change indicators for modified files and definitions
+- **Submodule trees** — initialized git submodules rendered as real directory trees with their full file structure
+- **Duplicate detection** — files with identical content shown as `duplicate of <path>` stubs
 
 This gives the agent a workflow for checking codebase structure at session start and keeping file descriptions up to date.
 
@@ -92,11 +95,13 @@ npx agentmap --ignore "dist/**" --ignore "**/test/**"
 **Options**
 
 ```
--o, --output <file>      Write output to file (default: stdout)
--f, --filter <pattern>   Filter pattern - only include matching files (can be repeated)
--i, --ignore <pattern>   Ignore pattern (can be repeated)
--h, --help               Show help
--v, --version            Show version
+-o, --output <file>           Write output to file (default: stdout)
+-f, --filter <pattern>        Filter pattern - only include matching files (can be repeated)
+-i, --ignore <pattern>        Ignore pattern (can be repeated)
+    --no-submodules           Exclude submodule info from the map
+    --max-desc-chars <chars>  Max characters for descriptions (default: 300)
+-h, --help                    Show help
+-v, --version                 Show version
 ```
 
 **Commands**
@@ -174,7 +179,7 @@ import "strings"
 func Helper() { ... }
 ```
 
-Descriptions are limited to the first 20 lines of the header comment.
+Descriptions are limited to the first 20 lines of the header comment (and 300 characters by default, configurable via `--max-desc-chars`).
 
 **Supported Languages**
 

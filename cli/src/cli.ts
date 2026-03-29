@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 // CLI entrypoint for generating codebase maps.
 
+import { createRequire } from 'node:module'
 import { writeFile } from 'fs/promises'
 import { resolve } from 'path'
 import { goke } from 'goke'
 import { generateMap, toYaml } from './index.js'
 import { createConsoleLogger } from './logger.js'
+
+const require = createRequire(import.meta.url)
+const packageJson = require('../package.json') as { version: string }
 
 const cli = goke('agentmap')
 const logger = createConsoleLogger()
@@ -154,7 +158,7 @@ cli
   })
 
 cli.help()
-cli.version('0.8.0')
+cli.version(packageJson.version)
 
 if (process.argv.slice(2).some(arg => arg === '-v' || arg === '--version')) {
   cli.outputVersion()
