@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+1. **Error toast notifications** — plugin errors now surface as OpenCode TUI toast notifications instead of being silently swallowed or polluting the terminal UI.
+
+2. **Updated to use agentmap 0.9.0** — benefits from recursive submodule trees, symlink filtering, duplicate file detection, and compressed output.
+
 ## 0.5.0
 
 - Update to use agentmap 0.8.0 with submodule support

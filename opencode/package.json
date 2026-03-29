@@ -1,6 +1,6 @@
 {
   "name": "@agentmap/opencode",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "OpenCode plugin that injects agentmap codebase map into system prompt",
   "type": "module",
   "repository": {

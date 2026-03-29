@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0
+
+1. **Recursive submodule trees** — submodule contents (files, folders, and nested submodules) now appear as real tree nodes in the map instead of flat leaf metadata. Agents can see the actual file structure inside each submodule.
+
+2. **Symlink filtering and duplicate file detection** — symlinks are excluded from the map entirely. Files with identical git blob SHAs are shown as a single-line `duplicate of <path>` stub rather than being fully analyzed twice, reducing noise and token cost.
+
+3. **Compressed output (~12% smaller on large repos)**:
+   - Descriptions capped at 300 characters by default; configurable via `--max-desc-chars N`
+   - Low-value non-exported definitions (interfaces, types, enums, consts) are filtered out; functions and classes are always kept
+   - Compact definition format: `exported fn` instead of `function, exported`
+
+4. **Removed line numbers from definition entries** — line info was redundant in the YAML output and has been stripped to keep map size down.
+
 ## 0.8.0
 
 - Add submodule detection and display in the codebase map
