@@ -30,14 +30,20 @@ export const AgentMapPlugin: Plugin = async ({ directory, client }) => {
 
   return {
     'chat.message': async ({ sessionID }) => {
-      if (sessionID !== lastSessionID) {
+      if (!lastSessionID) {
         lastSessionID = sessionID
-        cachedYaml = undefined
       }
     },
 
-    'experimental.chat.system.transform': async (_input, output) => {
+    'experimental.chat.system.transform': async (input, output) => {
       try {
+        const sessionID = (input as { sessionID?: string }).sessionID
+
+        if (sessionID && sessionID !== lastSessionID) {
+          lastSessionID = sessionID
+          cachedYaml = undefined
+        }
+
         // Skip if already has agentmap tag
         if (output.system.some((s) => s.includes('<agentmap>'))) return
 
