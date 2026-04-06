@@ -2,9 +2,8 @@
 // OpenCode plugin that injects codebase map into system prompt.
 
 import type { Plugin } from '@opencode-ai/plugin'
-import { formatLogMessage } from 'agentmap/src/logger'
-import type { Logger } from 'agentmap/src/logger'
-import { generateMapYaml } from 'agentmap/src/index'
+import { formatLogMessage, generateMapYaml } from 'agentmap'
+import type { Logger } from 'agentmap'
 
 const MAX_LINES = 1000
 

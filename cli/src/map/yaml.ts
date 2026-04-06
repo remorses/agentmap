@@ -1,7 +1,13 @@
 // Format map object to YAML string.
 
-import yaml from 'js-yaml'
 import type { MapNode } from '../types.js'
+
+const yaml = await import('js-yaml').then((module) => {
+  if (module && typeof module === 'object' && 'default' in module) {
+    return module.default as typeof import('js-yaml')
+  }
+  return module as typeof import('js-yaml')
+})
 
 /**
  * Check if a key is a README file (case-insensitive)

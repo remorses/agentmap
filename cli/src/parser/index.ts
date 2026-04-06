@@ -1,17 +1,19 @@
 // Tree-sitter parser initialization and code parsing.
 
-import Parser from 'web-tree-sitter'
+import type ParserType from 'web-tree-sitter'
 import type { Language, SyntaxTree } from '../types.js'
 import { loadGrammar } from './languages.js'
+import { loadParserClass } from './web-tree-sitter.js'
 
 let initialized = false
-let sharedParser: Parser | null = null
+let sharedParser: ParserType | null = null
 
 /**
  * Initialize the tree-sitter parser
  */
 export async function initParser(): Promise<void> {
   if (initialized) return
+  const Parser = await loadParserClass()
   await Parser.init()
   initialized = true
 }
@@ -19,11 +21,13 @@ export async function initParser(): Promise<void> {
 /**
  * Get the shared parser instance
  */
-async function getParser(): Promise<Parser> {
+async function getParser(): Promise<ParserType> {
   if (sharedParser) return sharedParser
   await initParser()
-  sharedParser = new Parser()
-  return sharedParser
+  const Parser = await loadParserClass()
+  const parser = new Parser()
+  sharedParser = parser
+  return parser
 }
 
 /**
