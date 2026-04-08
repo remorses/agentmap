@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+1. **Fixed plugin loading under OpenCode loaders** — the plugin failed to start whenever agentmap pulled in `web-tree-sitter`, `picomatch`, or other transitive CJS/async dependencies through the OpenCode ESM runtime. Switched to interop-safe imports so the plugin now loads cleanly every time.
+
+2. **Fixed system prompt stability across sessions** — the injected agentmap context was sometimes reused from the previous session on the first turn of a new session, then swapped on the second turn, breaking prompt-cache stability. Cache invalidation now happens at system-prompt construction time so the map is always correct from turn 1.
+
 ## 0.6.0
 
 1. **Error toast notifications** — plugin errors now surface as OpenCode TUI toast notifications instead of being silently swallowed or polluting the terminal UI.
