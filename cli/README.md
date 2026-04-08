@@ -15,6 +15,16 @@ agentmap
 agentmap . --output agentmap.yaml
 ```
 
+If the repo root contains `.agentmapignore`, matching paths are excluded automatically. For example:
+
+```gitignore
+foldername
+dist
+generated/**
+```
+
+This keeps both CLI output and the OpenCode plugin context shorter without needing repeated `--ignore` flags.
+
 ## Library
 
 ```ts

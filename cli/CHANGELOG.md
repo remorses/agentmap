@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0
+
+1. **`.agentmapignore` file support** — create a `.agentmapignore` at your repo root to permanently exclude folders and files from the generated map. Uses `.gitignore`-style line-based rules via the `ignore` package. A bare folder name like `foldername` excludes everything inside it:
+
+   ```gitignore
+   foldername
+   dist
+   generated/**
+   ```
+
+   This keeps both the CLI output and the OpenCode plugin context shorter without needing to pass `--ignore` flags every time. Additive with the existing `--ignore` CLI flag.
+
+2. **Fixed module loading under OpenCode ESM loaders** — static default imports from CommonJS modules (`js-yaml`, `web-tree-sitter`, `picomatch`) were replaced with interop-safe async imports. The plugin now loads cleanly when agentmap is loaded by the OpenCode plugin runtime.
+
 ## 0.9.0
 
 1. **Recursive submodule trees** — submodule contents (files, folders, and nested submodules) now appear as real tree nodes in the map instead of flat leaf metadata. Agents can see the actual file structure inside each submodule.

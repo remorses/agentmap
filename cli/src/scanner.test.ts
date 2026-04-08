@@ -93,3 +93,23 @@ describe('scanDirectory submodule recursion', () => {
 `)
   })
 })
+
+describe('scanDirectory .agentmapignore', () => {
+  test('excludes a directory matched by a bare folder name', async () => {
+    const repo = createRepo('agentmap-ignore-root-')
+    writeTrackedFile(repo, 'README.md', '# Root repo\n\nRoot repo README.')
+    writeTrackedFile(repo, 'foldername/README.md', '# Ignored folder\n\nIgnored README.')
+    writeTrackedFile(repo, 'src/README.md', '# Source folder\n\nIncluded README.')
+    writeTrackedFile(repo, '.agentmapignore', 'foldername\n')
+    commitAll(repo, 'Add repo files')
+
+    const result = await scanDirectory({ dir: repo.dir })
+
+    expect(result.files.map(file => file.relativePath).sort()).toMatchInlineSnapshot(`
+[
+  "README.md",
+  "src/README.md",
+]
+`)
+  })
+})

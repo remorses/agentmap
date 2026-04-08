@@ -92,6 +92,20 @@ npx agentmap --filter "src/**" --filter "lib/**"
 npx agentmap --ignore "dist/**" --ignore "**/test/**"
 ```
 
+**.agentmapignore**
+
+If the repo root contains a `.agentmapignore` file, agentmap excludes matching paths from the generated map automatically.
+
+The format is intentionally simple and line-based, similar to `.gitignore`. A bare directory name excludes everything under that folder:
+
+```gitignore
+foldername
+dist
+generated/**
+```
+
+Use `--ignore` for one-off CLI patterns and `.agentmapignore` for repo-local defaults that should also affect the OpenCode plugin context.
+
 **Options**
 
 ```

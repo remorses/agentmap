@@ -1,6 +1,6 @@
 {
   "name": "agentmap",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Generate a YAML map of your codebase for AI agent context",
   "type": "module",
   "repository": {
@@ -46,6 +46,7 @@
   "dependencies": {
     "@tree-sitter-grammars/tree-sitter-zig": "^1.1.2",
     "goke": "^6.2.0",
+    "ignore": "^7.0.5",
     "js-yaml": "^4.1.0",
     "marked": "^17.0.1",
     "p-limit": "^7.2.0",
