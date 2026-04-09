@@ -22,17 +22,23 @@ let ignoreFactoryPromise: Promise<typeof ignoreFactory> | undefined
 let picomatchFactoryPromise: Promise<GlobMatcherFactory> | undefined
 
 async function getIgnoreFactory(): Promise<typeof ignoreFactory> {
-  ignoreFactoryPromise ??= import('ignore').then((module) => module.default)
+  ignoreFactoryPromise ??= import('ignore').then((module): typeof ignoreFactory => {
+    const exported = module?.default || module
+    if (typeof exported !== 'function') {
+      throw new TypeError('ignore export is not a matcher factory')
+    }
+    return exported
+  })
   return ignoreFactoryPromise
 }
 
 async function getPicomatchFactory(): Promise<GlobMatcherFactory> {
-  picomatchFactoryPromise ??= import('picomatch').then((module) => {
-    const picomatch = Reflect.get(module, 'default')
-    if (typeof picomatch !== 'function') {
-      throw new TypeError('picomatch default export is not a matcher factory')
+  picomatchFactoryPromise ??= import('picomatch').then((module): GlobMatcherFactory => {
+    const exported = module?.default || module
+    if (typeof exported !== 'function') {
+      throw new TypeError('picomatch export is not a matcher factory')
     }
-    return (patterns) => picomatch(patterns)
+    return exported
   })
   return picomatchFactoryPromise
 }

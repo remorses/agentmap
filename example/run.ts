@@ -1,12 +1,16 @@
 // Repro harness for loading the local OpenCode plugin from example/opencode.json.
 
 import { existsSync } from 'node:fs'
-import { rm } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
-import { basename } from 'node:path'
+import { basename, join } from 'node:path'
 
 const cwd = new URL('.', import.meta.url).pathname
 const createdGitRepo = !existsSync(`${cwd}.git`)
+const systemPromptFile = join(cwd, '.opencode', 'system-prompt.txt')
+const errorFile = join(cwd, '.opencode', 'system-prompt-error.txt')
+const prompt = 'Reply exactly TEST'
+const model = 'google/gemini-flash-latest'
 
 function runGit(args: string[]) {
   const child = spawn('git', args, {
@@ -31,18 +35,27 @@ if (createdGitRepo) {
 }
 
 try {
-  await runGit(['add', basename(new URL('./README.md', import.meta.url).pathname), basename(new URL('./opencode.json', import.meta.url).pathname), basename(new URL('./run.ts', import.meta.url).pathname)])
+  await rm(systemPromptFile, { force: true })
+  await rm(errorFile, { force: true })
+  await runGit(['add', basename(new URL('./README.md', import.meta.url).pathname), basename(new URL('./opencode.json', import.meta.url).pathname), basename(new URL('./run.ts', import.meta.url).pathname), '.opencode/package.json', '.opencode/.gitignore'])
 
-  const child = spawn('opencode', ['run', '--print-logs', '--dir', '.', 'Reply with OK'], {
+  if (createdGitRepo) {
+    await runGit(['commit', '-m', 'init'])
+  }
+
+  const child = spawn('opencode', ['run', '--format', 'json', '--print-logs', '--model', model, '--dir', '.', prompt], {
     cwd,
-    env: process.env,
+    env: {
+      ...process.env,
+      AGENTMAP_DEBUG_SYSTEM_PROMPT_FILE: systemPromptFile,
+      AGENTMAP_DEBUG_ERROR_FILE: errorFile,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 
   const relevantLogs: string[] = []
-  let sawPluginLoad = false
   let sawPluginFailure = false
-  let shutdownScheduled = false
+  let stdout = ''
 
   function rememberRelevantLines(chunk: Buffer | string) {
     const text = chunk.toString()
@@ -51,27 +64,14 @@ try {
       if (/service=plugin|failed to load plugin|example\/opencode\.json loading|directory=\/Users\/morse\/kimaki\/mappamundi\/example/.test(line)) {
         relevantLogs.push(line)
       }
-      if (/service=plugin path=file:\/\/.*\/opencode\/src\/index\.ts loading plugin/i.test(line)) {
-        sawPluginLoad = true
-        scheduleShutdown()
-      }
       if (/failed to load plugin/i.test(line)) {
         sawPluginFailure = true
-        scheduleShutdown()
       }
     }
   }
 
-  function scheduleShutdown() {
-    if (shutdownScheduled) return
-    shutdownScheduled = true
-    setTimeout(() => {
-      child.kill('SIGKILL')
-    }, 500)
-  }
-
   child.stdout.on('data', (chunk) => {
-    rememberRelevantLines(chunk)
+    stdout += chunk.toString()
   })
 
   child.stderr.on('data', (chunk) => {
@@ -97,26 +97,48 @@ try {
     process.exit(1)
   }
 
-  if (!sawPluginLoad) {
-    process.stdout.write(`plugin-load: inconclusive (exit=${exit.code ?? 'null'} signal=${exit.signal ?? 'null'})\n`)
-    process.exit(2)
+  const textParts: string[] = []
+  let sawToolPart = false
+  for (const line of stdout.split('\n')) {
+    if (!line.trim().startsWith('{')) continue
+    const event = JSON.parse(line) as { type?: string, part?: { type?: string, text?: string } }
+    if (event.type === 'text' && event.part?.text) {
+      textParts.push(event.part.text)
+    }
+    if (event.part?.type?.includes('tool')) {
+      sawToolPart = true
+    }
   }
 
-  const { default: AgentMapPlugin } = await import('../opencode/src/index.ts')
-  const plugin = await AgentMapPlugin({
-    directory: cwd,
-    client: {
-      tui: {
-        showToast: async () => {},
-      },
-    },
-  } as never)
-  const output = { system: [] as string[] }
-  await plugin['experimental.chat.system.transform']({ sessionID: 'example-session' } as never, output as never)
+  const assistantText = textParts.at(-1)?.trim() ?? ''
+  const systemPrompt = existsSync(systemPromptFile) ? await readFile(systemPromptFile, 'utf8') : ''
+  const pluginError = existsSync(errorFile) ? await readFile(errorFile, 'utf8') : ''
+  const hasAgentmap = systemPrompt.includes('<agentmap>')
+  const mentionsExample = systemPrompt.includes('Agentmap Example')
 
-  process.stdout.write(`plugin-load: ok (exit=${exit.code ?? 'null'} signal=${exit.signal ?? 'null'})\n`)
-  process.stdout.write(`transform-injected: ${String(output.system.some((part) => part.includes('<agentmap>')))}\n`)
+  process.stdout.write(`model: ${model}\n`)
+  process.stdout.write(`assistant-text: ${assistantText || '(empty)'}\n`)
+  process.stdout.write(`used-tools: ${String(sawToolPart)}\n`)
+  process.stdout.write(`system-prompt-has-agentmap: ${String(hasAgentmap)}\n`)
+  process.stdout.write(`system-prompt-has-example-title: ${String(mentionsExample)}\n`)
+  process.stdout.write(`plugin-error: ${pluginError || '(none)'}\n`)
+
+  if (assistantText !== 'TEST') {
+    process.exit(3)
+  }
+
+  if (sawToolPart) {
+    process.exit(4)
+  }
+
+  if (!hasAgentmap || !mentionsExample) {
+    process.exit(5)
+  }
+
+  process.stdout.write(`prompt-run: ok (exit=${exit.code ?? 'null'} signal=${exit.signal ?? 'null'})\n`)
 } finally {
+  await rm(systemPromptFile, { force: true })
+  await rm(errorFile, { force: true })
   if (createdGitRepo) {
     await rm(`${cwd}.git`, { recursive: true, force: true })
   }
