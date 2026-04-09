@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+
+1. **Fixed plugin boot reliability in OpenCode** — the plugin entrypoint now exports a loader-safe default export and uses the updated `agentmap` scanner imports, so OpenCode can load the plugin and inject `<agentmap>` context without repeated startup errors.
+
 ## 0.7.0
 
 1. **Fixed plugin loading under OpenCode loaders** — the plugin failed to start whenever agentmap pulled in `web-tree-sitter`, `picomatch`, or other transitive CJS/async dependencies through the OpenCode ESM runtime. Switched to interop-safe imports so the plugin now loads cleanly every time.

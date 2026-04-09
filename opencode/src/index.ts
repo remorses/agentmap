@@ -7,7 +7,12 @@ import type { Logger } from 'agentmap'
 
 const MAX_LINES = 1000
 
-export const AgentMapPlugin: Plugin = async ({ directory, client }) => {
+function getSessionID(input: { sessionID?: string } | null | undefined): string | undefined {
+  const sessionID = input?.sessionID
+  return typeof sessionID === 'string' ? sessionID : undefined
+}
+
+const AgentMapPlugin: Plugin = async ({ directory, client }) => {
   let cachedYaml: string | undefined
   let lastSessionID: string | undefined
 
@@ -36,7 +41,7 @@ export const AgentMapPlugin: Plugin = async ({ directory, client }) => {
 
     'experimental.chat.system.transform': async (input, output) => {
       try {
-        const sessionID = (input as { sessionID?: string }).sessionID
+        const sessionID = getSessionID(input)
 
         if (sessionID && sessionID !== lastSessionID) {
           lastSessionID = sessionID
@@ -81,3 +86,6 @@ These descriptions appear in the agentmap XML at the start of every agent sessio
     },
   }
 }
+
+export { AgentMapPlugin }
+export default AgentMapPlugin

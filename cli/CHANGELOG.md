@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1
+
+1. **Fixed OpenCode startup when using ignore rules** — `agentmap` now lazy-loads `ignore` and `picomatch` inside the scanner instead of relying on loader-specific CommonJS interop during module startup. This fixes plugin boot failures in OpenCode when repos use `.agentmapignore`, `--ignore`, or `--filter` patterns.
+
 ## 0.10.0
 
 1. **`.agentmapignore` file support** — create a `.agentmapignore` at your repo root to permanently exclude folders and files from the generated map. Uses `.gitignore`-style line-based rules via the `ignore` package. A bare folder name like `foldername` excludes everything inside it:

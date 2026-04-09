@@ -2,9 +2,8 @@
 
 import { execSync } from 'child_process'
 import { realpathSync } from 'fs'
-import picomatch from 'picomatch'
 import pLimit from 'p-limit'
-import ignore from 'ignore'
+import type ignoreFactory from 'ignore'
 import { readFile } from 'fs/promises'
 import { join, normalize } from 'path'
 import { extractMarkerFromCode, extractMarkdownDescription } from './extract/marker.js'
@@ -17,6 +16,26 @@ import type { FileResult, GenerateOptions, FileDiff, FileDiffStats, SubmoduleInf
 import type { Logger } from './logger.js'
 
 type PathMatcher = (path: string) => boolean
+type GlobMatcherFactory = (patterns: string | string[]) => PathMatcher
+
+let ignoreFactoryPromise: Promise<typeof ignoreFactory> | undefined
+let picomatchFactoryPromise: Promise<GlobMatcherFactory> | undefined
+
+async function getIgnoreFactory(): Promise<typeof ignoreFactory> {
+  ignoreFactoryPromise ??= import('ignore').then((module) => module.default)
+  return ignoreFactoryPromise
+}
+
+async function getPicomatchFactory(): Promise<GlobMatcherFactory> {
+  picomatchFactoryPromise ??= import('picomatch').then((module) => {
+    const picomatch = Reflect.get(module, 'default')
+    if (typeof picomatch !== 'function') {
+      throw new TypeError('picomatch default export is not a matcher factory')
+    }
+    return (patterns) => picomatch(patterns)
+  })
+  return picomatchFactoryPromise
+}
 
 const AGENTMAP_IGNORE_FILE = '.agentmapignore'
 
@@ -40,6 +59,7 @@ function combinePathMatchers(...matchers: Array<PathMatcher | undefined>): PathM
 async function loadAgentmapIgnoreMatcher(dir: string): Promise<PathMatcher | undefined> {
   try {
     const file = await readFile(join(dir, AGENTMAP_IGNORE_FILE), 'utf8')
+    const ignore = await getIgnoreFactory()
     const matcher = ignore().add(file)
     return (path) => matcher.ignores(normalizeRelativePath(path))
   } catch {
@@ -331,6 +351,7 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
   const logger = options.logger ?? createConsoleLogger()
   const ignorePatterns = (options.ignore ?? []).filter((p): p is string => !!p)
   const filterPatterns = (options.filter ?? []).filter((p): p is string => !!p)
+  const picomatch = await getPicomatchFactory()
   const agentmapIgnoreMatcher = await loadAgentmapIgnoreMatcher(dir)
   const cliIgnoreMatcher = ignorePatterns.length > 0 ? picomatch(ignorePatterns) : undefined
 
