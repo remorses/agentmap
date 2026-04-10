@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2
+
+1. **Fixed system prompt changing mid-session** — the agentmap block injected into the system prompt was being regenerated on every turn (including resumed sessions), causing the prompt to shift as git diff stats changed. The plugin now persists a snapshot of the first generated prompt per session ID to `~/.local/state/agentmap/` and reuses it for all subsequent turns, keeping the context stable across the entire session.
+
 ## 0.7.1
 
 1. **Fixed plugin boot reliability in OpenCode** — the plugin entrypoint now exports a loader-safe default export and uses the updated `agentmap` scanner imports, so OpenCode can load the plugin and inject `<agentmap>` context without repeated startup errors.
