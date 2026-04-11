@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@tree-sitter-grammars/tree-sitter-zig": "^1.1.2",
-    "goke": "^6.5.2",
+    "goke": "^6.6.0",
     "ignore": "^7.0.5",
     "js-yaml": "^4.1.0",
     "marked": "^17.0.1",
