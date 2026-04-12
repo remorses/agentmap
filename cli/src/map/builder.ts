@@ -1,6 +1,5 @@
 // Build the nested map object from file results.
 
-import { basename } from 'path'
 import type { Definition, FileEntry, FileResult, FileDiffStats, MapNode, SubmoduleInfo, SubmoduleNode } from '../types.js'
 
 /**
@@ -164,12 +163,9 @@ function insertSubmodule(root: MapNode, sub: SubmoduleInfo): void {
 }
 
 /**
- * Get the root name from a directory path
+ * Get the root map key from a directory path.
  */
 export function getRootName(dir: string): string {
-  // Handle trailing slashes
   const cleaned = dir.replace(/\/+$/, '')
-  // Get basename, or use 'root' for current directory
-  const name = basename(cleaned)
-  return name === '.' || name === '' ? 'root' : name
+  return cleaned || '/'
 }

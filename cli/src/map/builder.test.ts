@@ -1,7 +1,18 @@
-// Tests for building nested map nodes for recursive submodule trees.
+// Tests for building nested map nodes and root key formatting.
 
 import { describe, expect, test } from 'bun:test'
-import { buildMap } from './builder.js'
+import { buildMap, getRootName } from './builder.js'
+
+describe('getRootName', () => {
+  test('uses the full absolute path', () => {
+    expect(getRootName('/Users/morse/kimaki/mappamundi')).toBe('/Users/morse/kimaki/mappamundi')
+    expect(getRootName('/Users/morse/kimaki/mappamundi/')).toBe('/Users/morse/kimaki/mappamundi')
+  })
+
+  test('preserves filesystem root', () => {
+    expect(getRootName('/')).toBe('/')
+  })
+})
 
 describe('buildMap with recursive submodules', () => {
   test('renders submodule metadata and nested files under the same node', () => {
