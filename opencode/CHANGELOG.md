@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3
+
+1. **Updated to agentmap 0.11.0** — picks up markdown/MDX file visibility in the map and absolute path root keys.
+
 ## 0.7.2
 
 1. **Fixed system prompt changing mid-session** — the agentmap block injected into the system prompt was being regenerated on every turn (including resumed sessions), causing the prompt to shift as git diff stats changed. The plugin now persists a snapshot of the first generated prompt per session ID to `~/.local/state/agentmap/` and reuses it for all subsequent turns, keeping the context stable across the entire session.

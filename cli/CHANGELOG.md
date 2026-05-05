@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0
+
+1. **Markdown and MDX files now appear in the map** — all tracked `.md` and `.mdx` files show up in the generated tree, even without a header comment. README files still get their description extracted; other markdown files appear as blank entries (e.g. `docs/notes.md:`) so agents can see the documentation structure without spending context on extracted prose.
+
+2. **Map root key is now the full absolute path** — the top-level key in the YAML output is the full repo root path (e.g. `/Users/morse/project`) instead of just the folder basename. This gives agents the real working directory context and avoids ambiguity when multiple repos share the same folder name.
+
 ## 0.10.1
 
 1. **Fixed OpenCode startup when using ignore rules** — `agentmap` now lazy-loads `ignore` and `picomatch` inside the scanner instead of relying on loader-specific CommonJS interop during module startup. This fixes plugin boot failures in OpenCode when repos use `.agentmapignore`, `--ignore`, or `--filter` patterns.
