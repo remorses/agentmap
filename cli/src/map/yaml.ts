@@ -1,13 +1,7 @@
 // Format map object to YAML string.
 
 import type { MapNode } from '../types.js'
-
-const yaml = await import('js-yaml').then((module) => {
-  if (module && typeof module === 'object' && 'default' in module) {
-    return module.default as typeof import('js-yaml')
-  }
-  return module as typeof import('js-yaml')
-})
+import yaml from 'js-yaml'
 
 /**
  * Check if a key is a README file (case-insensitive)
@@ -60,13 +54,29 @@ function markersToComments(yamlStr: string): string {
  * Automatically converts truncation markers to comments
  */
 export function toYaml(map: MapNode): string {
-  const yamlStr = yaml.dump(map, {
+  const normalizedMap = JSON.parse(JSON.stringify(map, (_key, value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return value
+    }
+
+    const entry = { ...value }
+    if (entry.description === '') {
+      delete entry.description
+    }
+
+    return Object.keys(entry).length === 0 ? null : entry
+  }))
+
+  const yamlStr = yaml.dump(normalizedMap, {
     indent: 2,
     lineWidth: -1,  // Don't wrap lines
     noRefs: true,   // Don't use YAML references
     sortKeys,       // Custom ordering: description first
     quotingType: '"',
     forceQuotes: false,
+    styles: {
+      '!!null': 'empty',
+    },
   })
-  return markersToComments(yamlStr)
+  return markersToComments(yamlStr).replace(/: $/gm, ':')
 }

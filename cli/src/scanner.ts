@@ -1,4 +1,4 @@
-// Scan directory for files with header comments/docstrings and recurse into submodules.
+// Scan directory for documented source files and markdown docs, recursing into submodules.
 
 import { execSync } from 'child_process'
 import { realpathSync } from 'fs'
@@ -20,6 +20,10 @@ type GlobMatcherFactory = (patterns: string | string[]) => PathMatcher
 
 let ignoreFactoryPromise: Promise<typeof ignoreFactory> | undefined
 let picomatchFactoryPromise: Promise<GlobMatcherFactory> | undefined
+
+function isTruthy<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined
+}
 
 async function getIgnoreFactory(): Promise<typeof ignoreFactory> {
   ignoreFactoryPromise ??= import('ignore').then((module): typeof ignoreFactory => {
@@ -46,7 +50,7 @@ async function getPicomatchFactory(): Promise<GlobMatcherFactory> {
 const AGENTMAP_IGNORE_FILE = '.agentmapignore'
 
 function combinePathMatchers(...matchers: Array<PathMatcher | undefined>): PathMatcher | undefined {
-  const activeMatchers = matchers.filter((matcher): matcher is PathMatcher => matcher !== undefined)
+  const activeMatchers = matchers.filter(isTruthy)
   if (activeMatchers.length === 0) {
     return undefined
   }
@@ -90,6 +94,11 @@ const SUPPORTED_EXTENSIONS = new Set(Object.keys(LANGUAGE_EXTENSIONS))
 function isSupportedFile(filepath: string): boolean {
   const ext = filepath.slice(filepath.lastIndexOf('.'))
   return SUPPORTED_EXTENSIONS.has(ext)
+}
+
+function isMarkdownFile(filepath: string): boolean {
+  const ext = filepath.slice(filepath.lastIndexOf('.')).toLowerCase()
+  return ext === '.md' || ext === '.mdx'
 }
 
 /**
@@ -259,7 +268,7 @@ async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
   const duplicateOf = buildDuplicateMap(allGitFiles, options.pathPrefix)
 
   let gitFiles = allGitFiles.filter(f => !normalizedSubmodulePaths.has(f.path))
-  gitFiles = gitFiles.filter(f => isSupportedFile(f.path) || isReadmeFile(f.path))
+  gitFiles = gitFiles.filter(f => isSupportedFile(f.path) || isMarkdownFile(f.path) || isReadmeFile(f.path))
 
   gitFiles = gitFiles.filter(f => {
     const relativePath = joinRelativePath(options.pathPrefix, f.path)
@@ -313,7 +322,12 @@ async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
             definitions: [],
           } satisfies FileResult
         }
-        return await processFile(fullPath, prefixedRelativePath, fileDiff, stats)
+        return await processFile({
+          fullPath,
+          relativePath: prefixedRelativePath,
+          fileDiff,
+          fileStats: stats,
+        })
       } catch {
         return null
       }
@@ -342,7 +356,7 @@ async function scanRepo(options: ScanRepoOptions): Promise<ScanResult> {
 
   return {
     files: [
-      ...results.filter((result): result is FileResult => result !== null),
+      ...results.filter(isTruthy),
       ...nestedResults.flatMap(result => result.files),
     ],
     submodules,
@@ -376,13 +390,33 @@ export async function scanDirectory(options: GenerateOptions = {}): Promise<Scan
 /**
  * Process a single file - check for marker and extract definitions
  */
-async function processFile(
+interface ProcessFileOptions {
   fullPath: string,
   relativePath: string,
   fileDiff?: FileDiff,
   fileStats?: FileDiffStats
-): Promise<FileResult | null> {
-  // Handle README.md files specially
+}
+
+async function processFile({
+  fullPath,
+  relativePath,
+  fileDiff,
+  fileStats,
+}: ProcessFileOptions): Promise<FileResult | null> {
+  // Handle markdown files specially. Include .md/.mdx files even when they have no extracted text.
+  if (isMarkdownFile(relativePath)) {
+    const description = isReadmeFile(relativePath)
+      ? await extractMarkdownDescription(fullPath)
+      : ''
+    return {
+      relativePath,
+      description: description ?? '',
+      definitions: [],
+      diff: fileStats,
+    }
+  }
+
+  // Keep support for README files without an extension.
   if (isReadmeFile(relativePath)) {
     const description = await extractMarkdownDescription(fullPath)
     if (!description) {

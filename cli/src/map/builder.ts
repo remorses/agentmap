@@ -101,7 +101,7 @@ function insertFile(root: MapNode, result: FileResult): void {
 
   const entry: FileEntry = {}
 
-  if (result.description) {
+  if (result.description !== undefined) {
     entry.description = result.description
   }
 

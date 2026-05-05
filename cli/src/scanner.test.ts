@@ -113,3 +113,46 @@ describe('scanDirectory .agentmapignore', () => {
 `)
   })
 })
+
+describe('scanDirectory markdown files', () => {
+  test('only extracts descriptions from README markdown files', async () => {
+    const repo = createRepo('agentmap-markdown-root-')
+    writeTrackedFile(repo, 'README.md', '# Root docs\n\nThis describes the repo.\n')
+    writeTrackedFile(repo, 'docs/empty.md', '')
+    writeTrackedFile(repo, 'docs/notes.md', '# Notes\n\nThis text should not become a description.\n')
+    writeTrackedFile(repo, 'docs/page.mdx', '# Page\n')
+    writeTrackedFile(repo, 'src/no-marker.ts', 'export const hidden = true\n')
+    commitAll(repo, 'Add markerless files')
+
+    const result = await scanDirectory({ dir: repo.dir })
+
+    expect(result.files.map(file => ({
+      path: file.relativePath,
+      description: file.description?.replace(/\n/g, '\\n'),
+      defs: file.definitions.length,
+    })).sort((a, b) => a.path.localeCompare(b.path))).toMatchInlineSnapshot(`
+[
+  {
+    "defs": 0,
+    "description": "",
+    "path": "docs/empty.md",
+  },
+  {
+    "defs": 0,
+    "description": "",
+    "path": "docs/notes.md",
+  },
+  {
+    "defs": 0,
+    "description": "",
+    "path": "docs/page.mdx",
+  },
+  {
+    "defs": 0,
+    "description": "Root docs\\nThis describes the repo.",
+    "path": "README.md",
+  },
+]
+`)
+  })
+})

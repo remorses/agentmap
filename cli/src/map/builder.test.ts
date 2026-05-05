@@ -1,7 +1,8 @@
-// Tests for building nested map nodes and root key formatting.
+// Tests for building nested map nodes, YAML formatting, and root key formatting.
 
 import { describe, expect, test } from 'bun:test'
 import { buildMap, getRootName } from './builder.js'
+import { toYaml } from './yaml.js'
 
 describe('getRootName', () => {
   test('uses the full absolute path', () => {
@@ -79,5 +80,32 @@ describe('buildMap with recursive submodules', () => {
         },
       },
     })
+  })
+})
+
+describe('toYaml', () => {
+  test('renders empty file entries as blank YAML values', () => {
+    const map = buildMap(
+      [
+        {
+          relativePath: 'docs/empty.md',
+          description: '',
+          definitions: [],
+        },
+        {
+          relativePath: 'docs/markerless.md',
+          definitions: [],
+        },
+      ],
+      'repo'
+    )
+
+    expect(toYaml(map)).toMatchInlineSnapshot(`
+"repo:
+  docs:
+    empty.md:
+    markerless.md:
+"
+`)
   })
 })
